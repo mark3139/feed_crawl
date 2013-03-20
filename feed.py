@@ -1,13 +1,11 @@
-class Entry():
-    pass
+from lxml import etree
+
+__all__ = ['parse_rss', 'parse_atom']
 
 
 class Feed(object):
     def __init__(self, etree):
         self.path = etree
-        self.title = self.get_meta('title')
-        self.link = self.get_meta('link')
-        self.des = self.get_meta('description')
 
     def get_meta(self, path):
         try:
@@ -15,6 +13,18 @@ class Feed(object):
         except AttributeError:
             meta = None
         return meta
+
+    @property
+    def title(self):
+        return self.get_meta('title')
+
+    @property
+    def link(self):
+        return self.get_meta('link')
+
+    @property
+    def des(self):
+        return self.get_meta('description')
 
 
 class RssItem(Feed):
@@ -33,3 +43,73 @@ class Rss(Feed):
 
     def get_items(self):
         return [RssItem(item) for item in self.path.findall('item')]
+
+
+class AtomBase(Feed):
+    def __init__(self, node):
+        Feed.__init__(self, node)
+        self.path = node
+        self.ns = {'ns': 'http://www.w3.org/2005/Atom'}
+
+    def get_meta(self, path, tag=None):
+        xpath = '%s:%s' % ('ns', path)
+        try:
+            if tag:
+                meta = self.path.find(xpath, namespaces=self.ns).get(tag)
+            else:
+                meta = self.path.find(xpath, namespaces=self.ns).text
+        except AttributeError:
+            meta = None
+        return meta
+
+    @property
+    def updated(self):
+        return self.get_meta('updated')
+
+    @property
+    def link(self):
+        return self.get_meta('link[@href]', 'href')
+
+
+class AtomItem(AtomBase):
+    def __init__(self, item):
+        Feed.__init__(self, item)
+        self.path = item
+        self.ns = {'ns': 'http://www.w3.org/2005/Atom'}
+
+    @property
+    def published(self):
+        return self.get_meta('published')
+
+    @property
+    def summary(self):
+        return self.get_meta('summary')
+
+    @property
+    def category(self):
+        return self.get_meta('category', 'term')
+
+
+class Atom(AtomBase):
+    def __init__(self, node):
+        Feed.__init__(self, node)
+        self.ns = {'ns': 'http://www.w3.org/2005/Atom'}
+
+    def get_items(self):
+        return [AtomItem(item) for item in self.path.findall('ns:entry', namespaces=self.ns)]
+
+    @property
+    def subtitle(self):
+        return self.get_meta('subtitle')
+
+
+def parse_rss(path):
+    parser = etree.XMLParser()
+    r = Rss(etree.parse(path, parser).find('channel'))
+    return r
+
+
+def parse_atom(path):
+    parser = etree.XMLParser()
+    a = Atom(etree.parse(path, parser))
+    return a
