@@ -64,7 +64,8 @@ class AtomBase(Feed):
                 meta = self.path.find(xpath, namespaces=self.ns).get(tag)
             else:
                 meta = self.path.find(xpath, namespaces=self.ns).text
-        except AttributeError:
+        except AttributeError, e:
+            print e
             meta = None
         return meta
 
@@ -84,16 +85,20 @@ class AtomItem(AtomBase):
         self.ns = {'ns': 'http://www.w3.org/2005/Atom'}
 
     @property
-    def published(self):
+    def pubdate(self):
         return self.get_meta('published')
 
     @property
-    def summary(self):
+    def des(self):
         return self.get_meta('summary')
 
     @property
     def category(self):
         return self.get_meta('category', 'term')
+
+    @property
+    def author(self):
+        return self.get_meta('author/ns:name')
 
 
 class Atom(AtomBase):
