@@ -37,6 +37,9 @@ class RssItem(Feed):
 
 
 class Rss(Feed):
+    def __str__(self):
+        return unicode("Title: %s Link: %s" % (self.title, self.link)).encode('utf8')
+
     def __init__(self, node):
         Feed.__init__(self, node)
         self.lang = self.get_meta('language')
@@ -46,6 +49,9 @@ class Rss(Feed):
 
 
 class AtomBase(Feed):
+    def __unicode__(self):
+        return "Title: %s" % self.title
+
     def __init__(self, node):
         Feed.__init__(self, node)
         self.path = node
@@ -91,6 +97,9 @@ class AtomItem(AtomBase):
 
 
 class Atom(AtomBase):
+    def __str__(self):
+        return unicode("Title: %s Link: %s" % (self.title, self.link)).encode('utf8')
+
     def __init__(self, node):
         Feed.__init__(self, node)
         self.ns = {'ns': 'http://www.w3.org/2005/Atom'}
