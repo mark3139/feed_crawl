@@ -1,6 +1,7 @@
 import re
 import urllib2
 import logging
+from datetime import datetime
 
 import memcache
 from sqlalchemy import create_engine, MetaData, Table
@@ -36,11 +37,18 @@ class Fetch():
         self.session = DB().session
 
     def is_exists(self):
-        return  self.mc.get(self.url)
+        id = self.mc.get(self.url)
+        if id:
+            return id
+        else:
+            s = self.feeds.select(self.feeds.c.user_link == self.url)
+            row = s.execute().fetchone()
+            return row.id if row else None
 
     def get_type(self):
-        rss = r'<rss version="2.0"'
+        rss = r'<rss version="2.0"|<rss xmlns'
         atom = r'<feed xmlns="http://www.w3.org/2005/Atom">'
+        #head = open(self.url).read(1000)
         head = urllib2.urlopen(self.url, timeout=10).read(200)
         logging.info("URL:%s, HEAD:%s", self.url, head)
         if re.search(rss, head):
@@ -64,11 +72,17 @@ class Fetch():
         finfo = {
             'title': feed.title,
             'link': feed.link,
-            'subtitle': getattr(feed, 'subtitle', ''),
-            'image': getattr(feed, 'image', ''),
             'updated': getattr(feed, 'updated', None),
             'type': type,
+            'user_link': self.url
         }
+        im = getattr(feed, 'image', '')
+        st = getattr(feed, 'subtitle', '')
+        if im:
+            finfo['image'] = im
+        if st:
+            finfo['subtitle'] = st
+
         if feed.des:
             finfo['des'] = feed.des
         if not finfo.get('des'):
@@ -87,16 +101,27 @@ class Fetch():
                 'title': item.title,
                 'link': item.link,
                 'des': item.des,
-                'category': item.category,
-                'author': item.author,
+                #'des': '',
                 'pubdate': item.pubdate,
                 'fid': row.lastrowid
             }
+            if item.author:
+                item_dc['author'] = item.author
+
+            if item.category:
+                item_dc['category'] = item.category
+
             if not item_dc['des']:
                 item_dc['hash'] = str_md5((item_dc['title']).encode('utf8'))
             else:
                 item_dc['hash'] = str_md5((item_dc['title'] + item_dc['des']).encode('utf8'))
+            try:
+                dt = datetime.strptime(item_dc['pubdate'][0: -6], "%a, %d %b %Y %H:%M:%S")
+                item_dc['pubdate'] = dt.strftime("%Y-%m-%d %H:%M:%S")
+            except ValueError:
+                pass
             items.append(item_dc)
+           # print item_dc
         i = self.items.insert()
         i.execute(items)
         return row.lastrowid
@@ -109,17 +134,18 @@ if __name__ == '__main__':
     logging.basicConfig(filename='err.log', level=logging.DEBUG)
     db = DB()
     #f = Fetch('http://robbinfan.com/rss/')
-    #f = Fetch('test/nanfang')
     test_urls = [
         'http://robbinfan.com/rss',
         'http://www.ruanyifeng.com/blog/atom.xml',
         'http://shell909090.com/blog/feed/',
         'http://digdeeply.org/feed',
         'http://www.read.org.cn/feed',
-        #'http://feed.feedsky.com/nosqlfan',
-        #'http://feed.feedsky.com/aqee-net',
-        #'http://feed.feedsky.com/programmer',
+        'http://feed.feedsky.com/nosqlfan',
+        'http://feed.feedsky.com/aqee-net',
+        'http://feed.feedsky.com/programmer',
         'http://cnpolitics.org/feed/'
+        'test/robin',
+        'test/feedsky'
     ]
     for url in test_urls:
         try:

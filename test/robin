@@ -1,0 +1,2090 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0"  xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>robbin的自言自语</title>
+    <description>范凯个人网站，发表个人原创的博客文章和学习笔记，包括互联网产品，研发和运营类的文章</description>
+    <link>http://robbinfan.com</link>
+    <language>zh-CN</language>
+    <copyright>Copyright 2012-2013, robbinfan.com</copyright>
+    <docs>http://blogs.law.harvard.edu/tech/rss</docs>
+    <atom:link href="http://robbinfan.com/rss" rel="self" type="application/rss+xml" />
+    <item>
+      <title>苹果的封闭与开放</title>
+      <description>
+        <![CDATA[ <p>苹果在上世纪80-90年代的失败并不是因为封闭导致的！到今天看，当年走开放体系的PC厂商们大部分都没有好下场，IBM卖了PC业务，Gateway没了，Compaq没了，HP和Dell在苦苦挣扎。对比今天苹果的Mac业务持续增长和利润率，你能说苹果封闭是失败的吗？从漫长的30年历史来看，走封闭路线的苹果笑到了最后。</p>
+
+<p>第一代Macintosh不太成功是因为产品过于超前，而且价格偏高，且产品定位在于教育和家庭市场，市场有限，因为当年电脑主要的市场在企业需求，而不是教育和家庭需求上，没有找对市场方向。当然，乔布斯或者说苹果的基因到现在也是教育和个人市场，在企业市场一直不太灵光，这也是为什么乔布斯搞Next商业很失败的原因：基因不对。</p>
+
+<p>多说两句：斯卡利在赶走乔布斯以后一直坚持了封闭策略，并且在以后相当长时间内保持了苹果的持续增长。90年代以后年苹果在Windows3.1冲击下开始下滑(败在产品不如Windows了，而不是封闭问题)，93年董事会要求开放MacOS操作系统授权，但斯卡利坚持封闭，所以被董事会fire了。93-97年开放授权MacOS才让苹果迅速的滑向了破产的边缘，到97年中乔布斯掌权以后又封闭了MacOS，苹果开始复兴。</p>
+
+<p>这段历史很耐人寻味：苹果封闭的时候总是强大的，盲目开放了就完蛋了。 <em>所以纵观整个90年代苹果的兴衰史，苹果衰落不在于封闭，而在于产品做不过竞争对手微软了</em></p>
+
+<p>一种说法认为当年苹果应该放弃硬件，授权MacOS操作系统，这样就没有后来的微软了。即便不考虑乔布斯被阿兰凯洗脑的那句名言：“每个热爱软件的人都应该自己做硬件”，实际上苹果公司如果想尝试兼容各种硬件，妥协各种兼容性，没有软件和硬件的配合，操作系统的开发难度会指数级上升，MacOS操作系统绝对不会比同时代的Windows更好。事实上微软也是在80年代初就秘密研发Windows，为何搞了10年才成功？</p>
+
+<p>看过《苹果往事》那本书的人应该印象深刻，在80年代初硬件那么有限的条件下，如果不是Mac软件硬件工程师紧密配合，MacOS这种图形操作系统绝不可能出现在那一代硬件上。</p>
+
+<p><em>苹果的兴衰历史和封闭不封闭没什么关系，主要在于产品的竞争力上，如果什么时候苹果的产品软件和硬件都不如竞争对手了，那就真正到了快完蛋的时候了</em></p>
+ ]]>
+      </description>
+      <pubDate>Thu, 14 Mar 2013 08:34:47 +0000</pubDate>
+      <link>http://robbinfan.com/blog/39/apple-close-culture</link>
+      <guid isPermaLink="false">http://robbinfan.com/blog/39/apple-close-culture</guid>
+    </item>
+    <item>
+      <title>Web应用的缓存设计模式</title>
+      <description>
+        <![CDATA[ <h2>ORM缓存引言</h2>
+
+<p>从10年前的2003年开始，在Web应用领域，ORM(对象-关系映射)框架就开始逐渐普及，并且流行开来，其中最广为人知的就是Java的开源ORM框架Hibernate，后来Hibernate也成为了EJB3的实现框架；2005年以后，ORM开始普及到其他编程语言领域，其中最有名气的是Ruby on rails框架的ORM － ActiveRecord。如今各种开源框架的ORM，乃至ODM(对象-文档关系映射，用在访问NoSQLDB)层出不穷，功能都十分强大，也很普及。</p>
+
+<p>然而围绕ORM的性能问题，也一直有很多批评的声音。其实ORM的架构对插入缓存技术是非常容易的，我做的很多项目和产品，但凡使用ORM，缓存都是标配，性能都非常好。而且我发现业界使用ORM的案例都忽视了缓存的运用，或者说没有意识到ORM缓存可以带来巨大的性能提升。</p>
+
+<h2>ORM缓存应用案例</h2>
+
+<p>我们去年有一个老产品重写的项目，这个产品有超过10年历史了，数据库的数据量很大，多个表都是上千万条记录，最大的表记录达到了9000万条，Web访问的请求数每天有300万左右。</p>
+
+<p>老产品采用了传统的解决性能问题的方案：Web层采用了动态页面静态化技术，超过一定时间的文章生成静态HTML文件；对数据库进行分库分表，按年拆表。动态页面静态化和分库分表是应对大访问量和大数据量的常规手段，本身也有效。但它的缺点也很多，比方说增加了代码复杂度和维护难度，跨库运算的困难等等，这个产品的代码维护历来非常困难，导致bug很多。</p>
+
+<p>进行产品重写的时候，我们放弃了动态页面静态化，采用了纯动态网页；放弃了分库分表，直接操作千万级，乃至近亿条记录的大表进行SQL查询；也没有采取读写分离技术，全部查询都是在单台主数据库上进行；数据库访问全部使用ActiveRecord，进行了大量的ORM缓存。上线以后的效果非常好：单台MySQL数据库服务器CPU的IO Wait低于5%；用单台1U服务器2颗4核至强CPU已经可以轻松支持每天350万动态请求量；最重要的是，插入缓存并不需要代码增加多少复杂度，可维护性非常好。</p>
+
+<p>总之，采用ORM缓存是Web应用提升性能一种有效的思路，这种思路和传统的提升性能的解决方案有很大的不同，但它在很多应用场景(包括高度动态化的SNS类型应用)非常有效，而且不会显著增加代码复杂度，所以这也是我自己一直偏爱的方式。因此我一直很想写篇文章，结合示例代码介绍ORM缓存的编程技巧。</p>
+
+<p>今年春节前后，我开发自己的个人网站项目，有意识的大量使用了ORM缓存技巧。对一个没多少访问量的个人站点来说，有些过度设计了，但我也想借这个机会把常用的ORM缓存设计模式写成示例代码，提供给大家参考。我的个人网站源代码是开源的，托管在github上：<a href="https://github.com/robbin/robbin_site">robbin_site</a></p>
+
+<h2>ORM缓存的基本理念</h2>
+
+<p>我在2007年的时候写过一篇文章，分析ORM缓存的理念：<a href="http://robbinfan.com/blog/3/orm-cache">ORM对象缓存探讨</a> ，所以这篇文章不展开详谈了，总结来说，ORM缓存的基本理念是：</p>
+
+<ul>
+<li>以减少数据库服务器磁盘IO为最终目的，而不是减少发送到数据库的SQL条数。实际上使用ORM，会显著增加SQL条数，有时候会成倍增加SQL。</li>
+<li>数据库schema设计的取向是尽量设计 <em>细颗粒度</em> 的表，表和表之间用外键关联，颗粒度越细，缓存对象的单位越小，缓存的应用场景越广泛</li>
+<li>尽量避免多表关联查询，尽量拆成多个表单独的主键查询，尽量多制造 <code>n + 1</code> 条查询，不要害怕“臭名昭著”的 <code>n + 1</code> 问题，实际上 <code>n + 1</code> 才能有效利用ORM缓存</li>
+</ul>
+
+<h2>利用表关联实现透明的对象缓存</h2>
+
+<p>在设计数据库的schema的时候，设计多个细颗粒度的表，用外键关联起来。当通过ORM访问关联对象的时候，ORM框架会将关联对象的访问转化成用主键查询关联表，发送 <code>n + 1</code>条SQL。而基于主键的查询可以直接利用对象缓存。</p>
+
+<p>我们自己开发了一个基于ActiveRecord封装的对象缓存框架：<a href="https://github.com/csdn-dev/second_level_cache">second_level_cache</a> ，从这个ruby插件的名称就可以看出，实现借鉴了Hibernate的二级缓存实现。这个对象缓存的配置和使用，可以看我写的<a href="http://robbinfan.com/blog/33/activerecord-object-cache">ActiveRecord对象缓存配置</a> 。</p>
+
+<p>下面用一个实际例子来演示一下对象缓存起到的作用：访问我个人站点的首页。 这个页面的数据需要读取三张表：blogs表获取文章信息，blog_contents表获取文章内容，accounts表获取作者信息。三张表的model定义片段如下，完整代码请看<a href="https://github.com/robbin/robbin_site/tree/master/models">models</a> ：</p>
+
+<pre><code>class Account &lt; ActiveRecord::Base
+  acts_as_cached
+  has_many :blogs
+end
+
+class Blog &lt; ActiveRecord::Base
+  acts_as_cached
+  belongs_to :blog_content, :dependent =&gt; :destroy 
+  belongs_to :account, :counter_cache =&gt; true
+end
+
+class BlogContent &lt; ActiveRecord::Base
+  acts_as_cached
+end
+</code></pre>
+
+<p>传统的做法是发送一条三表关联的查询语句，类似这样的：</p>
+
+<pre><code>SELECT blogs.*, blog_contents.content, account.name 
+    FROM blogs 
+    LEFT JOIN blog_contents ON blogs.blog_content_id = blog_contents.id 
+    LEFT JOIN accounts ON blogs.account_id = account.id
+</code></pre>
+
+<p>往往单条SQL语句就搞定了，但是复杂SQL的带来的表扫描范围可能比较大，造成的数据库服务器磁盘IO会高很多，数据库实际IO负载往往无法得到有效缓解。</p>
+
+<p>我的做法如下，完整代码请看<a href="https://github.com/robbin/robbin_site/blob/master/app/controllers/home.rb">home.rb</a> ：</p>
+
+<pre><code>@blogs = Blog.order(&#39;id DESC&#39;).page(params[:page])
+</code></pre>
+
+<p>这是一条分页查询，实际发送的SQL如下：</p>
+
+<pre><code>SELECT * FROM blogs ORDER BY id DESC LIMIT 20
+</code></pre>
+
+<p>转成了单表查询，磁盘IO会小很多。至于文章内容，则是通过<code>blog.content</code>的对象访问获得的，由于首页抓取20篇文章，所以实际上会多出来20条主键查询SQL访问blog_contents表。就像下面这样：</p>
+
+<pre><code>DEBUG -  BlogContent Load (0.3ms)  SELECT `blog_contents`.* FROM `blog_contents` WHERE `blog_contents`.`id` = 29 LIMIT 1
+DEBUG -  BlogContent Load (0.2ms)  SELECT `blog_contents`.* FROM `blog_contents` WHERE `blog_contents`.`id` = 28 LIMIT 1
+DEBUG -  BlogContent Load (1.3ms)  SELECT `blog_contents`.* FROM `blog_contents` WHERE `blog_contents`.`id` = 27 LIMIT 1
+......
+DEBUG -  BlogContent Load (0.9ms)  SELECT `blog_contents`.* FROM `blog_contents` WHERE `blog_contents`.`id` = 10 LIMIT 1
+</code></pre>
+
+<p>但是主键查询SQL不会造成表的扫描，而且往往已经被数据库buffer缓存，所以基本不会发生数据库服务器的磁盘IO，因而总体的数据库IO负载会远远小于前者的多表联合查询。特别是当使用对象缓存之后，会缓存所有主键查询语句，这20条SQL语句往往并不会全部发生，特别是热点数据，缓存命中率很高：</p>
+
+<pre><code>DEBUG -  Cache read: robbin/blog/29/1
+DEBUG -  Cache read: robbin/account/1/0
+DEBUG -  Cache read: robbin/blogcontent/29/0
+DEBUG -  Cache read: robbin/account/1/0
+DEBUG -  Cache read: robbin/blog/28/1
+......
+DEBUG -  Cache read: robbin/blogcontent/11/0
+DEBUG -  Cache read: robbin/account/1/0
+DEBUG -  Cache read: robbin/blog/10/1
+DEBUG -  Cache read: robbin/blogcontent/10/0
+DEBUG -  Cache read: robbin/account/1/0
+</code></pre>
+
+<p>拆分n+1条查询的方式，看起来似乎非常违反大家的直觉，但实际上这是真理，我实践经验证明：数据库服务器的瓶颈往往是磁盘IO，而不是SQL并发数量。因此 <em>拆分n+1条查询本质上是以增加n条SQL语句为代价，简化复杂SQL，换取数据库服务器磁盘IO的降低</em>  当然这样做以后，对于ORM来说，有额外的好处，就是可以高效的使用缓存了。</p>
+
+<h2>按照column拆表实现细粒度对象缓存</h2>
+
+<p>数据库的瓶颈往往在磁盘IO上，所以应该尽量避免对大表的扫描。传统的拆表是按照row去拆分，保持表的体积不会过大，但是缺点是造成应用代码复杂度很高；使用ORM缓存的办法，则是按照column进行拆表，原则一般是：</p>
+
+<ul>
+<li>将大字段拆分出来，放在一个单独的表里面，表只有主键和大字段，外键放在主表当中</li>
+<li>将不参与where条件和统计查询的字段拆分出来，放在独立的表中，外键放在主表当中</li>
+</ul>
+
+<p><em>按照column拆表本质上是一个去关系化的过程。主表只保留参与关系运算的字段，将非关系型的字段剥离到关联表当中，关联表仅允许主键查询，以Key-Value DB的方式来访问。因此这种缓存设计模式本质上是一种SQLDB和NoSQLDB的混合架构设计</em></p>
+
+<p>下面看一个实际的例子：文章的内容content字段是一个大字段，该字段不能放在blogs表中，否则会造成blogs表过大，表扫描造成较多的磁盘IO。我实际做法是创建blog_contents表，保存content字段，schema简化定义如下：</p>
+
+<pre><code>CREATE TABLE `blogs` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `title` varchar(255) NOT NULL,
+  `blog_content_id` int(11) NOT NULL,
+  `content_updated_at` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+);
+
+CREATE TABLE `blog_contents` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `content` mediumtext NOT NULL,
+  PRIMARY KEY (`id`)
+);
+</code></pre>
+
+<p>blog_contents表只有content大字段，其外键保存到主表blogs的blog_content_id字段里面。</p>
+
+<p>model定义和相关的封装如下：</p>
+
+<pre><code>class Blog &lt; ActiveRecord::Base
+  acts_as_cached
+  delegate :content, :to =&gt; :blog_content, :allow_nil =&gt; true
+
+  def content=(value)
+    self.blog_content ||= BlogContent.new
+    self.blog_content.content = value
+    self.content_updated_at = Time.now
+  end
+end
+
+class BlogContent &lt; ActiveRecord::Base
+  acts_as_cached
+  validates :content, :presence =&gt; true
+end    
+</code></pre>
+
+<p>在Blog类上定义了虚拟属性content，当访问<code>blog.content</code>的时候，实际上会发生一条主键查询的SQL语句，获取<code>blog_content.content</code>内容。由于BlogContent上面定义了对象缓存<code>acts_as_cached</code>，只要被访问过一次，content内容就会被缓存到memcached里面。</p>
+
+<p>这种缓存技术实际会非常有效，因为： <em>只要缓存足够大，所有文章内容可以全部被加载到缓存当中，无论文章内容表有多么大，你都不需要再访问数据库了</em>  更进一步的是： <em>这张大表你永远都只需要通过主键进行访问，绝无可能出现表扫描的状况</em>  为何当数据量大到9000万条记录以后，我们的系统仍然能够保持良好的性能，秘密就在于此。</p>
+
+<p>还有一点非常重要： <em>使用以上两种对象缓存的设计模式，你除了需要添加一条缓存声明语句acts_as_cached以外，不需要显式编写一行代码</em>  有效利用缓存的代价如此之低，何乐而不为呢？</p>
+
+<p>以上两种缓存设计模式都不需要显式编写缓存代码，以下的缓存设计模式则需要编写少量的缓存代码，不过代码的增加量非常少。</p>
+
+<h2>写一致性缓存</h2>
+
+<p>写一致性缓存，叫做write-through cache，是一个CPU Cache借鉴过来的概念，意思是说，当数据库记录被修改以后，同时更新缓存，不必进行额外的缓存过期处理操作。但在应用系统中，我们需要一点技巧来实现写一致性缓存。来看一个例子：</p>
+
+<p>我的网站文章原文是markdown格式的，当页面显示的时候，需要转换成html的页面，这个转换过程本身是非常消耗CPU的，我使用的是Github的markdown的库。Github为了提高性能，用C写了转换库，但如果是非常大的文章，仍然是一个耗时的过程，Ruby应用服务器的负载就会比较高。</p>
+
+<p>我的解决办法是缓存markdown原文转换好的html页面的内容，这样当再次访问该页面的时候，就不必再次转换了，直接从缓存当中取出已经缓存好的页面内容即可，极大提升了系统性能。我的网站文章最终页的代码执行时间开销往往小于10ms，就是这个原因。代码如下：</p>
+
+<pre><code>def md_content  # cached markdown format blog content
+  APP_CACHE.fetch(content_cache_key) { GitHub::Markdown.to_html(content, :gfm) }
+end
+</code></pre>
+
+<p>这里存在一个如何进行缓存过期的问题，当文章内容被修改以后，应该更新缓存内容，让老的缓存过期，否则就会出现数据不一致的现象。进行缓存过期处理是比较麻烦的，我们可以利用一个技巧来实现自动缓存过期：</p>
+
+<pre><code>def content_cache_key
+  &quot;#{CACHE_PREFIX}/blog_content/#{self.id}/#{content_updated_at.to_i}&quot;
+end
+</code></pre>
+
+<p>当构造缓存对象的key的时候，我用文章内容被更新的时间来构造key值，这个文章内容更新时间用的是blogs表的content_updated_at字段，当文章被更新的时候，blogs表会进行update，更新该字段。因此每当文章内容被更新，缓存的页面内容的key就会改变，应用程序下次访问文章页面的时候，缓存就会失效，于是重新调用<code>GitHub::Markdown.to_html(content, :gfm)</code>生成新的页面内容。 而老的页面缓存内容再也不会被应用程序存取，根据memcached的LRU算法，当缓存填满之后，将被优先剔除。</p>
+
+<p>除了文章内容缓存之外，文章的评论内容转换成html以后也使用了这种缓存设计模式。具体可以看相应的源代码：<a href="https://github.com/robbin/robbin_site/blob/master/models/blog_comment.rb">blog_comment.rb</a></p>
+
+<h2>片段缓存和过期处理</h2>
+
+<p>Web应用当中有大量的并非实时更新的数据，这些数据都可以使用缓存，避免每次存取的时候都进行数据库查询和运算。这种片段缓存的应用场景很多，例如：</p>
+
+<ul>
+<li>展示网站的Tag分类统计(只要没有更新文章分类，或者发布新文章，缓存一直有效)</li>
+<li>输出网站RSS(只要没有发新文章，缓存一直有效)</li>
+<li>网站右侧栏(如果没有新的评论或者发布新文章，则在一段时间例如一天内基本不需要更新)</li>
+</ul>
+
+<p>以上应用场景都可以使用缓存，代码示例：</p>
+
+<pre><code>def self.cached_tag_cloud
+  APP_CACHE.fetch(&quot;#{CACHE_PREFIX}/blog_tags/tag_cloud&quot;) do
+    self.tag_counts.sort_by(&amp;:count).reverse
+  end
+end
+</code></pre>
+
+<p>对全站文章的Tag云进行查询，对查询结果进行缓存  </p>
+
+<pre><code>&lt;% cache(&quot;#{CACHE_PREFIX}/layout/right&quot;, :expires_in =&gt; 1.day) do %&gt;
+
+&lt;div class=&quot;tag&quot;&gt;
+  &lt;% Blog.cached_tag_cloud.select {|t| t.count &gt; 2}.each do |tag| %&gt;
+  &lt;%= link_to &quot;#{tag.name}&lt;span&gt;#{tag.count}&lt;/span&gt;&quot;.html_safe, url(:blog, :tag, :name =&gt; tag.name) %&gt;
+  &lt;% end %&gt;
+&lt;/div&gt;
+......
+&lt;% end %&gt;
+</code></pre>
+
+<p>对全站右侧栏页面进行缓存，过期时间是1天。</p>
+
+<p>缓存的过期处理往往是比较麻烦的事情，但在ORM框架当中，我们可以利用model对象的回调，很容易实现缓存过期处理。我们的缓存都是和文章，以及评论相关的，所以可以直接注册Blog类和BlogComment类的回调接口，声明当对象被保存或者删除的时候调用删除方法：</p>
+
+<pre><code>class Blog &lt; ActiveRecord::Base
+  acts_as_cached
+  after_save :clean_cache
+  before_destroy :clean_cache
+  def clean_cache
+    APP_CACHE.delete(&quot;#{CACHE_PREFIX}/blog_tags/tag_cloud&quot;)   # clean tag_cloud
+    APP_CACHE.delete(&quot;#{CACHE_PREFIX}/rss/all&quot;)               # clean rss cache
+    APP_CACHE.delete(&quot;#{CACHE_PREFIX}/layout/right&quot;)          # clean layout right column cache in _right.erb
+  end
+end
+
+class BlogComment &lt; ActiveRecord::Base
+  acts_as_cached
+  after_save :clean_cache
+  before_destroy :clean_cache
+  def clean_cache
+    APP_CACHE.delete(&quot;#{CACHE_PREFIX}/layout/right&quot;)     # clean layout right column cache in _right.erb
+  end
+end  
+</code></pre>
+
+<p>在Blog对象的<code>after_save</code>和<code>before_destroy</code>上注册<code>clean_cache</code>方法，当文章被修改或者删除的时候，删除以上缓存内容。总之，可以利用ORM对象的回调接口进行缓存过期处理，而不需要到处写缓存清理代码。</p>
+
+<h2>对象写入缓存</h2>
+
+<p>我们通常说到缓存，总是认为缓存是提升应用读取性能的，其实缓存也可以有效的提升应用的写入性能。我们看一个常见的应用场景：记录文章点击次数这个功能。</p>
+
+<p>文章点击次数需要每次访问文章页面的时候，都要更新文章的点击次数字段view_count，然后文章必须实时显示文章的点击次数，因此常见的读缓存模式完全无效了。每次访问都必须更新数据库，当访问量很大以后数据库是吃不消的，因此我们必须同时做到两点：</p>
+
+<ul>
+<li>每次文章页面被访问，都要实时更新文章的点击次数，并且显示出来</li>
+<li>不能每次文章页面被访问，都更新数据库，否则数据库吃不消</li>
+</ul>
+
+<p>对付这种应用场景，我们可以利用对象缓存的不一致，来实现对象写入缓存。原理就是每次页面展示的时候，只更新缓存中的对象，页面显示的时候优先读取缓存，但是不更新数据库，让缓存保持不一致，积累到n次，直接更新一次数据库，但绕过缓存过期操作。具体的做法可以参考<a href="https://github.com/robbin/robbin_site/blob/master/models/blog.rb">blog.rb</a> ：</p>
+
+<pre><code># blog viewer hit counter
+def increment_view_count
+  increment(:view_count)        # add view_count += 1
+  write_second_level_cache      # update cache per hit, but do not touch db
+                                # update db per 10 hits
+  self.class.update_all({:view_count =&gt; view_count}, :id =&gt; id) if view_count % 10 == 0
+end
+</code></pre>
+
+<p><code>increment(:view_count)</code>增加view_count计数，关键代码是第2行<code>write_second_level_cache</code>，更新view_count之后直接写入缓存，但不更新数据库。累计10次点击，再更新一次数据库相应的字段。另外还要注意，如果blog对象不是通过主键查询，而是通过查询语句构造的，要优先读取一次缓存，保证页面点击次数的显示一致性，因此 <a href="https://github.com/robbin/robbin_site/blob/master/app/views/blog/_blog.erb">_blog.erb</a> 这个页面模版文件开头有这样一段代码：</p>
+
+<pre><code>&lt;% 
+  # read view_count from model cache if model has been cached.
+  view_count = blog.view_count
+  if b = Blog.read_second_level_cache(blog.id)
+    view_count = b.view_count
+  end
+%&gt;
+</code></pre>
+
+<p>采用对象写入缓存的设计模式，就可以非常容易的实现写入操作的缓存，在这个例子当中，我们仅仅增加了一行缓存写入代码，而这个时间开销大约是1ms，就可以实现文章实时点击计数功能，是不是非常简单和巧妙？实际上我们也可以使用这种设计模式实现很多数据库写入的缓存功能。</p>
+
+<p>常用的ORM缓存设计模式就是以上的几种，本质上都是非常简单的编程技巧，代码的增加量和复杂度也非常低，只需要很少的代码就可以实现，但是在实际应用当中，特别是当数据量很庞大，访问量很高的时候，可以发挥惊人的效果。我们实际的系统当中，缓存命中次数:SQL查询语句，一般都是5:1左右，即每次向数据库查询一条SQL，都会在缓存当中命中5次，数据主要都是从缓存当中得到，而非来自于数据库了。</p>
+
+<h2>其他缓存的使用技巧</h2>
+
+<p>还有一些并非ORM特有的缓存设计模式，但是在Web应用当中也比较常见，简单提及一下：</p>
+
+<h3>用数据库来实现的缓存</h3>
+
+<p>在我这个网站当中，每篇文章都标记了若干tag，而tag关联关系都是保存到数据库里面的，如果每次显示文章，都需要额外查询关联表获取tag，显然会非常消耗数据库。在我使用的<code>acts-as-taggable-on</code>插件中，它在blogs表当中添加了一个<code>cached_tag_list</code>字段，保存了该文章标记的tag。当文章被修改的时候，会自动相应更新该字段，避免了每次显示文章的时候都需要去查询关联表的开销。</p>
+
+<h3>HTTP客户端缓存</h3>
+
+<p>基于资源协议实现的HTTP客户端缓存也是一种非常有效的缓存设计模式，我在2009年写过一篇文章详细的讲解了：<a href="http://robbinfan.com/blog/13/http-cache-implement">基于资源的HTTP Cache的实现介绍</a> ，所以这里就不再复述了。</p>
+
+<h3>用缓存实现计数器功能</h3>
+
+<p>这种设计模式有点类似于对象写入缓存，利用缓存写入的低开销来实现高性能计数器。举一个例子：用户登录为了避免遭遇密码暴力破解，我限定了每小时每IP只能尝试登录5次，如果超过5次，拒绝该IP再次尝试登录。代码实现很简单，如下：</p>
+
+<pre><code>post :login, :map =&gt; &#39;/login&#39; do
+  login_tries = APP_CACHE.read(&quot;#{CACHE_PREFIX}/login_counter/#{request.ip}&quot;)
+  halt 403 if login_tries &amp;&amp; login_tries.to_i &gt; 5  # reject ip if login tries is over 5 times
+  @account = Account.new(params[:account])
+  if login_account = Account.authenticate(@account.email, @account.password)
+    session[:account_id] = login_account.id
+    redirect url(:index)
+  else
+    # retry 5 times per one hour
+    APP_CACHE.increment(&quot;#{CACHE_PREFIX}/login_counter/#{request.ip}&quot;, 1, :expires_in =&gt; 1.hour)
+    render &#39;home/login&#39;
+  end
+end
+</code></pre>
+
+<p>等用户POST提交登录信息之后，先从缓存当中取该IP尝试登录次数，如果大于5次，直接拒绝掉；如果不足5次，而且登录失败，计数加1，显示再次尝试登录页面。</p>
+
+<p>以上相关代码可以从这里获取：<a href="https://github.com/robbin/robbin_site">robbin_site</a></p>
+ ]]>
+      </description>
+      <pubDate>Thu, 07 Mar 2013 18:08:44 +0000</pubDate>
+      <link>http://robbinfan.com/blog/38/orm-cache-sumup</link>
+      <guid isPermaLink="false">http://robbinfan.com/blog/38/orm-cache-sumup</guid>
+    </item>
+    <item>
+      <title>textmate常用快捷键备忘</title>
+      <description>
+        <![CDATA[ <h2>视图切换</h2>
+
+<pre><code>Ctrl + Option + Cmd + D     # 显示/隐藏左边文件导航树
+Cmd + Option + W            # 切换代码折行
+Cmd + Option + -&gt;           # 切换左右Tab页
+Cmd + Option + &lt;-
+Cmd + Shift + {             # 切换左右Tab页
+Cmd + Shift + }
+</code></pre>
+
+<h2>目录树视图</h2>
+
+<pre><code>Ctrl + Cmd + R              # 跳转到当前打开文件所在的目录树的位置
+Cmd + Up/Down               # 左边目录树向上，向下进入一层 
+Cmd + Shift + Y             # 切换到文件的Git状态视图
+</code></pre>
+
+<h2>文件导航</h2>
+
+<pre><code>Cmd + T                     # 快速打开项目中文件
+Cmd + Shift + T             # 快速打开当前文件里面的方法
+Cmd + Option + Up           # 在同名文件中跳转(例如Tire.m ,Tire.h)
+Cmd + Option + Down         # 在关联文件中跳转(例如topic.rb, topic_test.rb)
+</code></pre>
+
+<h2>光标跳转</h2>
+
+<pre><code>Ctrl + Tab                  # 切换到左边的导航树窗口
+Shift + Tab                 # 切换到右边的代码编辑器窗口
+Ctrl + V                    # 光标向下跳一个段落
+Option + Up/Down            # 向上或者向下跳转一个段落
+Cmd + Enter                 # 光标跳到当前行的下一行开始处
+Cmd + L                     # 跳转到某行
+Ctrl + Shift + ( )          # 在括号开闭间跳转
+Ctrl + Up/Down              # 移动到括号开始和结束的地方
+</code></pre>
+
+<h2>代码选择</h2>
+
+<pre><code>Ctrl + W                    # 选择当前词汇
+Ctrl + Option + B           # 选择当前字符串
+Cmd + Shift + B             # 选择当前括号
+Cmd + Shift + L             # 选择当前行
+Ctrl + Option + P           # 选择整个段落
+Option + Shift + Up/Down    # 向上或者向下选择一个段落
+</code></pre>
+
+<h2>代码格式化</h2>
+
+<pre><code>Cmd + [                     # 整块左移
+Cmd + ]                     # 整块右移
+Cmd + Option + [            # 对选中的多行代码进行格式化
+</code></pre>
+
+<h2>代码折叠</h2>
+
+<pre><code>F1                          # 折叠和展开代码段
+Cmd + Option + 1            # 折叠顶层
+Cmd + Option + 2            # 折叠第二层
+Cmd + Option + 3            # 折叠第三层
+</code></pre>
+
+<h2>代码编辑</h2>
+
+<pre><code>Cmd + Shift + V             # 按照历史拷贝顺序来粘贴
+Ctrl + Cmd + Option + V     # 显示剪贴板
+Cmd + /                     # 注释和取消代码块注释
+Cmd + Option + A            # 对多行内容进行同样的编辑
+ESC                         # 自动补齐当前文件已经出现过的关键词
+</code></pre>
+
+<h2>查找和替换</h2>
+
+<pre><code>Ctrl+ S                     # 在当前文件下面出现搜索框，在当前文件快速扫描
+Cmd + F                     # 在当前文章中查找
+Cmd + Shift + F             # 在项目当中查找
+Cmd + G                     # 继续查找下一个匹配
+Cmd + Shift + G             # 查找上一个匹配
+Cmd + Option + F            # 替换掉然后继续查找下一个
+Cmd + Ctrl + F              # 当前文件全部替换
+</code></pre>
+
+<h2>窗口操作</h2>
+
+<pre><code>Cmd + W                     # 关闭当前Tab页
+Cmd + Shift + W             # 关闭当前项目窗口
+Cmd + Option + N            # 在当前项目里创建新文件
+Option + F2                 # 显示当前文件的上下文菜单
+Option + F1                 # 显示当前bundle的上下文菜单
+Ctrl + Cmd + T              # 对bundle功能进行快捷选择
+Ctrl + Shift + T            # 显示当前项目的TODO条目
+</code></pre>
+
+<h2>HTML bundle</h2>
+
+<pre><code>Ctrl + Shift + &lt;            # 自动生成HTML标签
+Ctrl + Shift + W            # 对选择的文字用HTML标签包围
+Cmd + Option + .            # 对HTML tag进行结束标签补齐
+Ctrl + Shift + Cmd + W      # 对选择的文字段落用HTML标签包围（多行模式，每行一个标签）
+</code></pre>
+
+<h2>Rails bundle</h2>
+
+<pre><code>Cmd + Option + Shift + Down # 切换Controller/View/Model/Test
+Cmd + Option + Down         # 切换Model/Test, Controller/View 
+Ctrl+ F                     # 跟踪类和方法的源代码定义
+Ctrl + Shift + &gt;            # 自动补齐 &lt;%= %&gt;
+Ctrl + P                    #  params[:id]
+Ctrl + J                    #  session[:user]
+Ctrl + L                    #  =&gt;
+: Tab                       # Hash
+</code></pre>
+
+<h2>TextMate 列编辑模式</h2>
+
+<p>按住Option，用鼠标选择要插入字符的行。如果仅仅插入字符，注意选择0列，选择多列的话会把它们覆盖掉。选择完毕应该看到一条细细的竖线，然后输入要插入的字符。TextMate 会实时显示所有的更改。</p>
+ ]]>
+      </description>
+      <pubDate>Thu, 07 Mar 2013 12:10:16 +0000</pubDate>
+      <link>http://robbinfan.com/blog/37/textmate-keyboard-shortcut</link>
+      <guid isPermaLink="false">http://robbinfan.com/blog/37/textmate-keyboard-shortcut</guid>
+    </item>
+    <item>
+      <title>大公司的创新思考：基因延伸性创新</title>
+      <description>
+        <![CDATA[ <p>Scott D.Anthony的《<a href="http://hbr.org/2012/09/the-new-corporate-garage/ar/1">THE NEW CORPORATE GARAGE</a>》提出了一个有趣的观点，我们正在进入一个新的创新时代：随着创新成本和创新门槛的不断降低，大公司在创新竞争力方面的劣势变少了，那些在大公司内部具有创业意识的“创新催化剂”能够利用大公司的资源、规模和品牌做出重大的产品和商业创新。而这种类型的创新是VC投资的小型创业公司没有条件实现的，大公司的规模不再成为创新的阻碍，而是创新的基石。Scott举了4个行业的大公司创新案例：医疗器械行业的美敦力，快速消费品行业的联合利华，农业的先正达和IT行业的IBM。</p>
+
+<p>对于Scott的观点，我比较赞同对大公司创新类型的总结，但并不完全认同现在目前已经进入大公司创新时代的观点。我认为创新分为两种类型：基因延伸性创新和颠覆性创新，大公司利用自身的资源、规模和品牌在“创新催化剂”作用下的创新属于“基因延伸性创新”，这种创新往往比较容易在大公司环境下成功，另外一种“颠覆性创新”几乎无法在大公司成功。</p>
+
+<p>公司的基因是什么？ <em>基因指的是一个成功的公司在该领域竞争过程中，为了适应商业竞争对自身的高度优化，正是这种高度优化乃至进化，才能树立起公司在这个领域的领先地位，这一点就是公司的基因</em>    基因既能够保证公司在核心竞争领域的优势，同时又会成为公司扩张到其他领域的障碍，这一点从许许多多大公司的竞争中都可以看到，例如：微软公司在PC软件时代呼风唤雨，却失意于互联网；Google在互联网行业执一时牛耳，却不敌Facebook的社交竞争；诺基亚曾经是功能手机之王，却衰落于智能手机和移动互联网的崛起。</p>
+
+<p>Google的吴军博士在《浪潮之巅》中精辟的总结了“基因决定定律”，即公司的基因决定了能否在一个新的领域有所建树。即便是伟大的创新者苹果公司，也未能突破基因决定定律，苹果公司虽然在消费电子硬件和软件领域所向无敌，但是在社交领域的尝试ping产品却一败涂地，Game Center也差强人意，iCloud虽有进展，但迄今没有发挥出来巨大的威力。</p>
+
+<p>因此大公司创新成功的必要条件之一就是：创新必须顺着公司的基因生长，将公司在核心领域的优势延伸到一个新的领域，这种模式的创新我称之为：基因延伸性创新，Scott举的4个例子莫不如是。国内的互联网行业的大公司也是这样的，最近两年最引人瞩目大公司创新产品非新浪微博和腾讯微信莫属。我们可以一一拆解来看：</p>
+
+<p>新浪的基因是互联网媒体，新浪微博从运营上继承了新浪一贯强媒体运营模式，并且将自身积累的媒体资源优势强势导入，所以迅速做大，产生了巨大的社会效益，打造了一个移动新媒体。据最新调查显示，新浪微博的访问量移动端流量已经超过60％，因此：新浪微博是新浪在一个新领域(移动互联网)利用自身基因延伸创新的成功案例。</p>
+
+<p>腾讯的基因则是个人通讯工具和个人休闲娱乐产品，但是在移动互联网领域，QQ的产品有很多方面不再适合。微信虽然是远离腾讯总部的广州研究院独立创新的产品，但是微信仍然没有脱离腾讯做个人通讯工具产品的基因，因而在微信产品崭露头角之后，利用腾讯庞大的QQ用户资源导入，达到了惊人的成功。因此微信也是腾讯在一个新领域(移动互联网)利用自身基因延伸创新的成功案例。</p>
+
+<p>基因延伸性创新要成功，必须符合两点：</p>
+
+<h3>一、创新产品必须符合大公司基因，如果基因不对，纵然有Scott推崇的“创新催化剂”，也不会成功。</h3>
+
+<p>例如Google的社交产品Google+，始终不能对Facebook产生实质性的威胁，这是因为Google的基因是技术驱动，没有社交基因；新浪曾经大举进军过网络游戏领域，也一败涂地，这是因为新浪的基因是媒体，沿着媒体基因的创新才有可能成功；腾讯也不例外，腾讯在电子商务领域近年来的投资一直不遗余力，但是效果从来不彰，和Groupon的合作也黯然收场，尽管腾讯今年组织架构调整，再次吹响了进军电子商务的号角，但我并不是很看好，原因就在于腾讯没有电子商务的基因。</p>
+
+<h3>二、延伸的新领域要有这种基因产品的市场容纳空间</h3>
+
+<p>新浪微博和腾讯微信延伸到的移动互联网领域具有足够的市场容纳空间，所以以媒体为核心的微博、以个人通讯为核心的微信才能充分施展拳脚。如果市场容纳空间不够，仍然无法成功。例如苹果公司的AppleTV产品即为一个典型的例子，苹果每个月iPhone手机出货量大约1000多万台，iPad出货量大约500万台左右，这两者贡献了苹果主要的收入和利润，而Mac电脑出货量大约100多万台，贡献收入和利润比例很低。我们设想即使苹果做出了非常成功的一体化电视机，一年能有多少销量？手机是人手一台，电视机是一个家庭一台；手机是两年至多三年肯定要换，而电视机的更换周期至少有5年以上，假设平均一个家庭3－4口人，iPhone销量应该是AppleTV的5倍左右，换句话说就是，AppleTV卖到iPhone这种热销程度，也不过每个月只能卖出200万台而已，市场想象空间较小。</p>
+
+<p>综上所述，大公司要创新成功，如Scott所说，需要创新催化剂的推动，需要大公司资源、规模和品牌的帮助，但更需要选准创新方向和领域，即创新方向要符合公司基因，创新领域要有足够市场容纳空间。</p>
+
+<p>除了基因延伸性创新之外，还有一种创新：颠覆性创新。例如Google的关键词搜索获取内容的模式颠覆了雅虎赖以为生的门户推荐内容模式，让后者彻底衰落了；Google的免费在线服务模式颠覆了微软销售个人盒装软件的模式，让后者不再成为时代的宠儿；苹果的iOS开辟的移动互联网时代，颠覆了一大堆传统智能手机和功能手机厂商，颠覆了PC互联网时代的一大群公司。</p>
+
+<p>这种颠覆性创新有巨大的破坏力，轻者它会破坏大公司的核心商业模式，重者它会埋葬整个行业乃至整个传统市场。所以颠覆性创新几乎无法在大公司实现，因为公司内部的阻力会轻易扼杀颠覆性创新的存在。而颠覆性创新恰恰是VC投资驱动的创业型公司比较容易实现的。颠覆性创新重新定义了游戏规则，开辟了新的市场空间，将大公司和创业公司拉到了同一水平线上竞争，因而颠覆性创新往往是由创业型公司实现的。从这一点上来说，我并不完全同意Scott的观点。</p>
+
+<p>颠覆性创新虽然难以在大公司立足，但是仍然有大公司颠覆性创新的成功案例，一般来说，大公司要实现颠覆性创新的前提条件是：改变公司基因。当公司基因被改变以后，颠覆性创新就变成了顺着公司基因生长的延伸性创新了，这样就进入了大公司的优势领域，成功把握大大提高。改变公司基因当然是很困难的事情，但是也确实有成功案例，改变基因最有效的手段就是收购了，特别是收购一个具有强大创新能力的创业团队，将被收购者的基因注入公司。</p>
+
+<p>例如1996年底摇摇欲坠的苹果公司收购了乔布斯的NeXT公司，1997年中乔布斯担任苹果临时CEO，带来了苹果的复兴。复兴后的苹果公司高管除了工业设计副总裁乔纳森艾夫，清一色的NeXT班底，当时的苹果老人全部被洗掉了，带来公司复兴的核心技术也全部来自NeXT的研究成果。与其说苹果收购了NeXT，不如说NeXT反向收购了苹果公司，后来的苹果只是一个披了苹果logo马甲的NeXT公司而已。</p>
+
+<p>收购之后不能将被收购者的基因融入公司，往往收购就是徒劳无功的，微软公司2005年收购了雷奥茨的Groove公司，任命雷奥茨担任微软首席架构师，也意在改造微软基因，加强微软在互联网领域的竞争力，但最终微软公司未能因为雷奥茨的到来而改变基因，反而是雷奥茨的黯然离去。</p>
+
+<p>总之，从创新的角度来说，大公司创新容易遇到的问题是基因造成的障碍和规模带来的阻碍，创业公司创新容易遇到的问题是资源不足和资金短缺造成的发展无力，各有各的苦衷。我认为未来的创新趋势应该是大公司和创业公司齐头并进，而不是大公司凭借资源、规模和品牌优势的一枝独秀。</p>
+ ]]>
+      </description>
+      <pubDate>Mon, 04 Mar 2013 21:25:24 +0000</pubDate>
+      <link>http://robbinfan.com/blog/36/big-company-creative</link>
+      <guid isPermaLink="false">http://robbinfan.com/blog/36/big-company-creative</guid>
+    </item>
+    <item>
+      <title>用textmate修改服务器上的文件</title>
+      <description>
+        <![CDATA[ <ol>
+<li>在textmate的 Preferences | Terminal 里面 check &quot;Accept rmate connections&quot;</li>
+<li><p>点击rmate link，将rmate文件内容复制下来，在服务器上创建rmate命令：</p>
+
+<pre><code>vi /usr/local/bin/rmate
+chmod a+x /usr/local/bin/rmate
+</code></pre></li>
+<li><p>修改服务器的环境变量</p>
+
+<pre><code>RMATE_HOST=127.0.0.1
+export RMATE_HOST=127.0.0.1
+</code></pre></li>
+<li><p>打开textmate，ssh连接服务器的时候添加参数，创建反向SSH隧道：</p>
+
+<pre><code>ssh -R 52698:127.0.0.1:52698 remote_host
+</code></pre></li>
+<li><p>在服务器上修改文件用 rmate filename，即可以让本地textmate修改和保存该远程服务器文件</p></li>
+<li><p>如果不是在ssh的命令行上设置反向tunnel，也可以在ssh config里面设置</p>
+
+<pre><code>Host example
+    Hostname example.com
+    RemoteForward 52698 localhost:52698
+</code></pre></li>
+</ol>
+ ]]>
+      </description>
+      <pubDate>Mon, 04 Mar 2013 21:13:19 +0000</pubDate>
+      <link>http://robbinfan.com/blog/35/rmate-config</link>
+      <guid isPermaLink="false">http://robbinfan.com/blog/35/rmate-config</guid>
+    </item>
+    <item>
+      <title>Git常用命令备忘</title>
+      <description>
+        <![CDATA[ <h2>Git配置</h2>
+
+<pre><code>git config --global user.name &quot;robbin&quot;   
+git config --global user.email &quot;fankai@gmail.com&quot;
+git config --global color.ui true
+git config --global alias.co checkout
+git config --global alias.ci commit
+git config --global alias.st status
+git config --global alias.br branch
+git config --global core.editor &quot;mate -w&quot;    # 设置Editor使用textmate
+git config -l  # 列举所有配置
+</code></pre>
+
+<p>用户的git配置文件<code>~/.gitconfig</code>  </p>
+
+<h2>Git常用命令</h2>
+
+<h3>查看、添加、提交、删除、找回，重置修改文件</h3>
+
+<pre><code>git help &lt;command&gt;  # 显示command的help
+git show            # 显示某次提交的内容
+git show $id
+
+git co  -- &lt;file&gt;   # 抛弃工作区修改
+git co  .           # 抛弃工作区修改
+
+git add &lt;file&gt;      # 将工作文件修改提交到本地暂存区
+git add .           # 将所有修改过的工作文件提交暂存区
+
+git rm &lt;file&gt;       # 从版本库中删除文件
+git rm &lt;file&gt; --cached  # 从版本库中删除文件，但不删除文件
+
+git reset &lt;file&gt;    # 从暂存区恢复到工作文件
+git reset -- .      # 从暂存区恢复到工作文件
+git reset --hard    # 恢复最近一次提交过的状态，即放弃上次提交后的所有本次修改
+
+git ci &lt;file&gt;
+git ci .
+git ci -a           # 将git add, git rm和git ci等操作都合并在一起做
+git ci -am &quot;some comments&quot;
+git ci --amend      # 修改最后一次提交记录
+
+git revert &lt;$id&gt;    # 恢复某次提交的状态，恢复动作本身也创建了一次提交对象
+git revert HEAD     # 恢复最后一次提交的状态
+</code></pre>
+
+<h3>查看文件diff</h3>
+
+<pre><code>git diff &lt;file&gt;     # 比较当前文件和暂存区文件差异
+git diff
+git diff &lt;$id1&gt; &lt;$id2&gt;   # 比较两次提交之间的差异
+git diff &lt;branch1&gt;..&lt;branch2&gt; # 在两个分支之间比较 
+git diff --staged   # 比较暂存区和版本库差异
+git diff --cached   # 比较暂存区和版本库差异
+git diff --stat     # 仅仅比较统计信息
+</code></pre>
+
+<h3>查看提交记录</h3>
+
+<pre><code>git log
+git log &lt;file&gt;      # 查看该文件每次提交记录
+git log -p &lt;file&gt;   # 查看每次详细修改内容的diff
+git log -p -2       # 查看最近两次详细修改内容的diff
+git log --stat      # 查看提交统计信息
+</code></pre>
+
+<h3>tig</h3>
+
+<p>Mac上可以使用tig代替diff和log，<code>brew install tig</code></p>
+
+<h2>Git 本地分支管理</h2>
+
+<h3>查看、切换、创建和删除分支</h3>
+
+<pre><code>git br -r           # 查看远程分支
+git br &lt;new_branch&gt; # 创建新的分支
+git br -v           # 查看各个分支最后提交信息
+git br --merged     # 查看已经被合并到当前分支的分支
+git br --no-merged  # 查看尚未被合并到当前分支的分支
+
+git co &lt;branch&gt;     # 切换到某个分支
+git co -b &lt;new_branch&gt; # 创建新的分支，并且切换过去
+git co -b &lt;new_branch&gt; &lt;branch&gt;  # 基于branch创建新的new_branch
+
+git co $id          # 把某次历史提交记录checkout出来，但无分支信息，切换到其他分支会自动删除
+git co $id -b &lt;new_branch&gt;  # 把某次历史提交记录checkout出来，创建成一个分支
+
+git br -d &lt;branch&gt;  # 删除某个分支
+git br -D &lt;branch&gt;  # 强制删除某个分支 (未被合并的分支被删除的时候需要强制)
+</code></pre>
+
+<h3>分支合并和rebase</h3>
+
+<pre><code>git merge &lt;branch&gt;               # 将branch分支合并到当前分支
+git merge origin/master --no-ff  # 不要Fast-Foward合并，这样可以生成merge提交
+
+git rebase master &lt;branch&gt;       # 将master rebase到branch，相当于：
+git co &lt;branch&gt; &amp;&amp; git rebase master &amp;&amp; git co master &amp;&amp; git merge &lt;branch&gt;
+</code></pre>
+
+<h2>Git补丁管理(方便在多台机器上开发同步时用)</h2>
+
+<pre><code>git diff &gt; ../sync.patch         # 生成补丁
+git apply ../sync.patch          # 打补丁
+git apply --check ../sync.patch  # 测试补丁能否成功
+</code></pre>
+
+<h2>Git暂存管理</h2>
+
+<pre><code>git stash                        # 暂存
+git stash list                   # 列所有stash
+git stash apply                  # 恢复暂存的内容
+git stash drop                   # 删除暂存区
+</code></pre>
+
+<h2>Git远程分支管理</h2>
+
+<pre><code>git pull                         # 抓取远程仓库所有分支更新并合并到本地
+git pull --no-ff                 # 抓取远程仓库所有分支更新并合并到本地，不要快进合并
+git fetch origin                 # 抓取远程仓库更新
+git merge origin/master          # 将远程主分支合并到本地当前分支
+git co --track origin/branch     # 跟踪某个远程分支创建相应的本地分支
+git co -b &lt;local_branch&gt; origin/&lt;remote_branch&gt;  # 基于远程分支创建本地分支，功能同上
+
+git push                         # push所有分支
+git push origin master           # 将本地主分支推到远程主分支
+git push -u origin master        # 将本地主分支推到远程(如无远程主分支则创建，用于初始化远程仓库)
+git push origin &lt;local_branch&gt;   # 创建远程分支， origin是远程仓库名
+git push origin &lt;local_branch&gt;:&lt;remote_branch&gt;  # 创建远程分支
+git push origin :&lt;remote_branch&gt;  #先删除本地分支(git br -d &lt;branch&gt;)，然后再push删除远程分支
+</code></pre>
+
+<h2>Git远程仓库管理</h2>
+
+<pre><code>git remote -v                    # 查看远程服务器地址和仓库名称
+git remote show origin           # 查看远程服务器仓库状态
+git remote add origin git@github:robbin/robbin_site.git         # 添加远程仓库地址
+git remote set-url origin git@github.com:robbin/robbin_site.git # 设置远程仓库地址(用于修改远程仓库地址)
+git remote rm &lt;repository&gt;       # 删除远程仓库
+</code></pre>
+
+<h3>创建远程仓库</h3>
+
+<pre><code>git clone --bare robbin_site robbin_site.git  # 用带版本的项目创建纯版本仓库
+scp -r my_project.git git@git.csdn.net:~      # 将纯仓库上传到服务器上
+
+mkdir robbin_site.git &amp;&amp; cd robbin_site.git &amp;&amp; git --bare init # 在服务器创建纯仓库
+git remote add origin git@github.com:robbin/robbin_site.git    # 设置远程仓库地址
+git push -u origin master                                      # 客户端首次提交
+git push -u origin develop  # 首次将本地develop分支提交到远程develop分支，并且track
+
+git remote set-head origin master   # 设置远程仓库的HEAD指向master分支
+</code></pre>
+
+<p>也可以命令设置跟踪远程库和本地库</p>
+
+<pre><code>git branch --set-upstream master origin/master
+git branch --set-upstream develop origin/develop
+</code></pre>
+ ]]>
+      </description>
+      <pubDate>Thu, 28 Feb 2013 21:58:06 +0000</pubDate>
+      <link>http://robbinfan.com/blog/34/git-common-command</link>
+      <guid isPermaLink="false">http://robbinfan.com/blog/34/git-common-command</guid>
+    </item>
+    <item>
+      <title>ActiveRecord对象缓存配置</title>
+      <description>
+        <![CDATA[ <h2>second_level_cache的使用</h2>
+
+<p>在Gemfile里面添加：</p>
+
+<pre><code>gem &quot;second_level_cache&quot;, :git =&gt; &quot;git://github.com/csdn-dev/second_level_cache.git&quot;
+</code></pre>
+
+<p>使用非常简单：</p>
+
+<pre><code>class User &lt; ActiveRecord::Base
+  acts_as_cached
+end
+</code></pre>
+
+<p>完整设置：</p>
+
+<pre><code>class User &lt; ActiveRecord::Base
+  acts_as_cached(:version =&gt; 1, :expires_in =&gt; 1.week)
+end
+</code></pre>
+
+<p>对象缓存的key结构示例： <code>cache_prefix/model/id/version</code></p>
+
+<p>version参数非常有用，当你使用migration修改Model的schema，升级生产环境代码之后，由于Model的Cache还是老的schema，可能会导致应用程序出错，除非你清理所有的Model Cache。所以当你的Model schema修改之后，你可以相应修改版本号，这样会修改Cache的key，避免程序出错问题。Model的默认版本号是0。</p>
+
+<p>对Model使用对象缓存之后，单对象读取，以及关联对象读取将自动访问和填充缓存，不需要编码。个别情况下你可能需要对缓存进行过期操作：</p>
+
+<pre><code>user = User.find(id)
+user.expire_second_level_cache
+
+user.write_second_level_cache
+</code></pre>
+
+<p>或者</p>
+
+<pre><code>User.expire_second_level_cache(id)
+</code></pre>
+
+<p>更多使用方法请参考：<a href="https://github.com/csdn-dev/second_level_cache">Second level cache</a></p>
+
+<h2>second_level_cache的配置</h2>
+
+<p>对象缓存的配置有3项，如果在Rails里面使用，参考Rails缓存配置，如果不在Rails里面使用，需要自己配置。</p>
+
+<h3>使用memcached</h3>
+
+<p>在Gemfile里面添加如下gem:</p>
+
+<pre><code>gem &#39;dalli&#39;
+gem &#39;kgio&#39;
+</code></pre>
+
+<p>在配置文件<code>application.rb</code>或者相应配置文件当中配置如下：</p>
+
+<pre><code>require &#39;dalli&#39;
+require &#39;active_support/cache/dalli_store&#39;
+Dalli.logger = logger
+CACHE = ActiveSupport::Cache::DalliStore.new(&quot;127.0.0.1&quot;)
+</code></pre>
+
+<p>如果是分布式memcached，配置如下：</p>
+
+<pre><code>CACHE = ActiveSupport::Cache::DalliStore.new(&quot;127.0.0.1&quot;, &quot;127.0.0.2&quot;)
+</code></pre>
+
+<p>然后初始化second_level_cache：</p>
+
+<pre><code>SecondLevelCache.configure do |config|
+  config.cache_store = CACHE
+  config.logger = logger
+  config.cache_key_prefix = &#39;domain&#39;
+end
+</code></pre>
+
+<h3>使用redis</h3>
+
+<p>在Gemfile里面添加如下gem:</p>
+
+<pre><code>gem &#39;redis&#39;
+gem &#39;hiredis&#39;
+gem &#39;redis-activesupport&#39;
+</code></pre>
+
+<p>在配置文件<code>application.rb</code>或者相应配置文件当中配置如下：</p>
+
+<pre><code>require &#39;redis-activesupport&#39;
+CACHE = ActiveSupport::Cache::RedisStore.new :host =&gt; &quot;127.0.0.1&quot;, :driver =&gt; :hiredis
+</code></pre>
+
+<p>如果是分布式redis，配置如下：</p>
+
+<pre><code>CACHE = ActiveSupport::Cache::RedisStore.new [{:host =&gt; &quot;127.0.0.1&quot;, :port =&gt; 6379, :driver =&gt; :hiredis}, {:host =&gt; &quot;127.0.0.1&quot;, :port =&gt; 6380, :driver =&gt; :hiredis}]
+</code></pre>
+
+<p>然后初始化second_level_cache:</p>
+
+<pre><code>SecondLevelCache.configure do |config|
+  config.cache_store = CACHE
+  config.logger = logger
+  config.cache_key_prefix = &#39;domain&#39;
+end
+</code></pre>
+ ]]>
+      </description>
+      <pubDate>Thu, 28 Feb 2013 21:16:58 +0000</pubDate>
+      <link>http://robbinfan.com/blog/33/activerecord-object-cache</link>
+      <guid isPermaLink="false">http://robbinfan.com/blog/33/activerecord-object-cache</guid>
+    </item>
+    <item>
+      <title>GitHub 是怎么火起来的</title>
+      <description>
+        <![CDATA[ <p>Github不是突然火起来的，在Ruby社区Github其实从一开始就很流行，我们2009年搞Ruby大会就邀请了Github的人来上海了，早在2009年Github在国内的Ruby社区就很有名气了。之所以今天大家突然觉得Github火，只不过是因为刚拿到1亿美元融资的眼球效应罢了。</p>
+
+<p>Github是一个从Ruby社区诞生出来的项目，这几年我也算是看着Github发展起来的，可以说Git在Ruby社区普及和爆发几乎是必然的事情。Git虽然是Linux内核社区开发出来的，但前几年一直不温不火。真正在开源社区普及和爆发，是从Ruby社区和Github开始的。</p>
+
+<p>Rails是一个高度集成的Web框架，通常情况下一到两个Rails程序员做一个Web项目就够了，一旦多人同时在一个Rails项目上工作，代码提交和协作会遇到很大的麻烦，更不要说开源项目大规模远程协作了。这算是Rails项目的一个痛点：单个工程师开发效率很高，但是团队协作很困难，CVS/SVN这种集中提交式的SCM都不能很好的支持Rails团队的工作模式。事实上我的Ruby团队规模一大也遇到了这个难题，代码提交经常冲突，协作困难。</p>
+
+<p>Git这种良好支持分支管理的分布式的SCM真正解决了这个问题：每个工程师在自己本地分支上开发，完成功能以后往master分支合并。我们Ruby团队使用Git以后，代码提交冲突问题迎刃而解。所以Git这种SCM像是给Ruby社区量身打造的一样，所以你可以看到Ruby社区几乎没有不用Git的。</p>
+
+<p>Github本身也是这种需求下的产物，一些湾区的Ruby社区的程序员使用Git以后，找不到好的Git托管网站，于是就开发了Github出来。然后Rails框架率先迁移到Github上，形成了示范效应，整个Ruby社区呼啦啦都迁上去了。Ruby社区另有一好处：各种开源库和包都统一用Gem格式发布，而一旦大量Gem都迁移到Github上了，Ruby程序员就跟着都开始用Github了。我当年就是为了跟一些gem的库就开始用Gihub的。</p>
+
+<p>这里多说两句：Ruby社区是一个相当团结的社区，很少分裂，经常是一旦采用一个技术，整个社区就会迅速跟进和普及。虽然在国内Ruby是个小众的编程语言，但是在硅谷，Ruby很火，被誉为云计算时代的Web编程语言。Ruby整个社区都迁移到Github，开始对其他编程语言社区形成示范效应，其他编程语言社区接着跟进。</p>
+
+<p>Ruby程序员因为做Web开发，经常用JavaScript，很多Ruby社区核心人员本身也是JS社区的核心人员，JS社区也就很快进驻Github。同时Ruby社区因为DHH的示范效应，基本上整个社区都是人手一台Mac，天然对OSX比较近，而随着iOS开发的繁荣，大量的Ruby程序员跟进开发iOS app，带动iOS社区也从Github上成长起来了。看看今天的Github，Ruby，JS和iOS的项目比例是非常高的，Java比例则远不如Sourceforge和Google Code，这有一定的社区渊源。</p>
+
+<p>Github也很重视社区活动，经常搞Drinkup，此外Github产品上有很多领先的地方，例如从网站产品上定位为social coding，支持大规模开源项目分布式协作的各种工作模式等等。</p>
+
+<p>不过Github现在估值这么高，我认为主要还是云计算SAAS平台的概念带来的，它给企业用户提供Private代码仓库托管收费服务是盈利的。云平台现在估值都很高，Dropbox，Evernote都远比Github估值高，所以Github现在的估值高也不算意外。</p>
+ ]]>
+      </description>
+      <pubDate>Tue, 26 Feb 2013 16:16:31 +0000</pubDate>
+      <link>http://robbinfan.com/blog/32/github-history</link>
+      <guid isPermaLink="false">http://robbinfan.com/blog/32/github-history</guid>
+    </item>
+    <item>
+      <title>我为何喜欢上海不喜欢北京</title>
+      <description>
+        <![CDATA[ <p>我大学在天津读书，姐姐家就在北京，常来常往，对北京很熟悉。大学毕业的时候选择去了陌生的南方城市上海，而不是非常熟悉的北京，这一点令身边的亲戚都大惑不解。一转眼在上海落户生活了十来年，现在却又因为工作原因来到北京。我可以这么说：我越在北京住，碰到的事情越多，越证明我当年选择去上海的决定是多么的英明。</p>
+
+<h2>我更喜欢上海的人文环境</h2>
+
+<p>我大学毕业的时候选择去上海，而不是北京，是因为觉得自己和南方人更相处的来：大学的时候，我一直不太习惯很多北方同学称兄道弟没有距离感的热络劲，好像不称兄道弟不酒酣耳热，你就看不起他一样，我不认同这种虚伪的社交方式，也很不喜欢在那种闹哄哄的氛围下被裹挟的感觉。而且北方人办事情喜欢先拉关系，很多事情要在酒桌上谈，这一点我也很不习惯。</p>
+
+<p>我反而高度认同上海人的相处方式：有分寸的距离感，尽量不去麻烦别人，也不轻易承诺别人，不欠人情债；有高度的契约意识，一旦答应的事情就会规规矩矩的做好；办事情不必非要拉关系；谈合作先小人后君子，严格按照合同来。我喜欢这种高度透明的相处方式，在这种人际环境下，隐形的人际交往成本被降到了最低。</p>
+
+<p>当然就具体个人来说，总有例外，但概括的总结，上海的人文环境更偏西方化一些，人际关系比较简单，比较适合我不喜欢拉帮结派，喜欢一切都摆在台面上性格的人。</p>
+
+<h2>上海的市政行政和公共交通比北京领先10年以上</h2>
+
+<p>原来的北京在这方面和上海的差距更大，但是08年奥运对北京的提升还是很明显的。即便在上海生活的十多年，我也经常来北京，明显感觉到08年前后北京飞速的发展，和上海差距的拉近。当然差距还是明显滴～</p>
+
+<p>1、上海政府行政效率非常高。我是在上海自己开过公司的人，跑各种机构的次数很多，不说政府官员，说的是底层的一线公务员，那办事效率，那服务意识，那政务电子化水平，绝对令人印象深刻，绝对是服务型的政府。至于北京的各个衙门，我常听公司人事和财务的抱怨，差距太大了。</p>
+
+<p>2、公共交通。上海固然也堵，但和北京不可同日而语。我某次开车回上海，下班高峰期进市区，在外环上开100公里时速，换了北京就不用说啥了吧。大家可以自己做个试验，选择下班时间打开Google地图北京和上海，看看标红的道路密度有多大差距。</p>
+
+<p>3、市政。北京只要一下暴雨就全城瘫痪，上海可是年年夏天有台风的城市啊，交通怎么从不瘫痪？我在上海从来不买车，去哪里都很方便，公交地铁换乘，加上打车很方便。至于北京，幸亏我刚来北京就买车了，再晚3个月连摇号的资格都没有，北京的出租车拒载问题是我买车的直接原因。</p>
+
+<h2>空气污染</h2>
+
+<p>我当年大学毕业南下上海的时候，正好赶上北京和天津沙尘暴天气走的。到了上海，在一个同学那里洗了澡，走在军工路上，一阵强劲的江风吹过来。我条件反射的掀起衣服盖住脑袋，然后才想起来这已经在上海了，不是华北了。我当时沐浴干净的江风就万分感慨，我一定要留在上海。看看现在PM2.5的对比，就不用说啥了。上次回上海，看新闻说初五凌晨放鞭炮，上海PM2.5达到了300了，严重污染，呼吁市民注意。我就表示非常淡定，北京春节期间天天爆表呢。</p>
+
+<h2>上海生活更方便</h2>
+
+<p>1、上海遍地24小时便利店，北京满大街找不到一个。最糟糕到冬天，附近一个京客隆晚上8.00就关门了，实在让我诧异的不行了，上海的超市哪有晚上10.00前关门的？</p>
+
+<p>2、上海水电费缴费可以用支付宝了，可北京电费用电卡，这一点让我太费解了。谁知道家里什么时候电快用完了。我反正当年在我姐家里就碰到突然停电，她手忙脚乱打手电满屋子找电卡，然后下楼去充电的时候。</p>
+
+<p>3、上海只要一下雨，所有的地铁出口，商场出口不知道从哪里冒出来无数卖雨伞的人，一把折叠伞10块钱，十多年没有涨过价，很厚道。以至于我从来没有养成雨天带伞的习惯，上海家里屯了十几把雨伞。</p>
+
+<p>4、上海地铁换乘相对比较方便，地铁出口一般都在闹市区(浦东有些不是)，但北京地铁很奇怪，很多出口很拧吧，我忘记了很多年前到中关村什么地铁出口出来，居然还翻了一道铁栅栏，过了铁路才是马路。</p>
+
+<h2>北京奇怪的酒吧文化</h2>
+
+<p>我曾经慕名去了一趟三里屯，一趟后海，我想不明白怎么各个酒吧门口好几米外都站着几个东北壮汉拉客，实在太煞风景了。那场景让我感觉到自己是块砧板上的肉，酒吧门口的汉子们就是磨刀霍霍的屠夫。上海衡山路上的酒吧，门口永远是非常幽静的，进去以后才热闹。北京这种酒吧拉客行为让我感觉非常的低俗。</p>
+
+<p>还有很多方面，都比较琐碎，不一一举例了。一句话总结：上海的城市化文明程度比北京要高一个时代，差距是全方位的。北京这个城市真的不适合人类居住。</p>
+ ]]>
+      </description>
+      <pubDate>Tue, 26 Feb 2013 16:15:01 +0000</pubDate>
+      <link>http://robbinfan.com/blog/31/why-love-shanghai</link>
+      <guid isPermaLink="false">http://robbinfan.com/blog/31/why-love-shanghai</guid>
+    </item>
+    <item>
+      <title>说说我的减肥心得</title>
+      <description>
+        <![CDATA[ <p>三年前，我刚从上海到北京工作，半年减肥将近30斤，从201年3月份的84公斤，减到了2010年9月份的70公斤，6个月减了14公斤（我的身高是174cm），身体状态也感觉很好。之后三年松懈了，慢慢体重又上升到了79公斤，最近下定决心，重新开始减肥旅程，看看半年之后我能不能减肥到70公斤以下。下面是我三年前减肥的总结经验，重新开始执行起来！</p>
+
+<h2>养成不吃晚餐的良好习惯</h2>
+
+<p>我从3月份开始不吃晚饭。貌似听起来很吓人，其实不然。很多白领都不吃早餐，吃中晚两餐。而我则是吃早中两餐，早餐还吃得很饱，所以每天进食量并不比一般人少。 </p>
+
+<p>晚上饿了怎么办？ 一开始有点饿，但是习惯就好了，不觉得饿了，但我晚上也都吃一点水果，并非什么都不吃，其实就是要严格管住自己的嘴，控制好每天的进食量。现在每天晚上肚子空着睡觉感觉很舒服，如果哪天有应酬吃了晚饭回来，则会觉得很不舒服，肚子很撑，所以说都是习惯问题。不吃晚饭对我来说已经养成习惯了，如果我减到 63公斤，体重不会持续下降的话，我觉得我也没有什么必要非要吃晚餐了。 </p>
+
+<p>不过我感觉我应该接近到达了平衡点了，一开始我不吃晚餐，体重降得很快，一个月降了起码4公斤，越降越慢，现在在严格控制得情况下，一个月也不过降1公斤而已，所以说，估计我的体重应该会最终维持在65-67公斤左右，不会因为不吃晚饭而进一步下降了。所以我觉得这个状况很健康。 </p>
+
+<h2>不喝碳酸饮料</h2>
+
+<p>我本来就不太喜欢喝含糖份高的碳酸饮料，喝了觉得胃不消化，可能我胃酸偏多吧，反倒是喝茶很舒服，可能茶碱中和了胃酸。所以我每天喝茶很多，坚决不喝那些各种饮料包括可乐。 </p>
+
+<h2>良好的作息习惯</h2>
+
+<p>早睡早起，保证充足睡眠很重要，我减肥是为了身体健康，之前我的脂肪肝中度，肝功能不正常(转氨酶高)。早睡早起有利于肝脏的正常工作，减肥下来以后，脂肪肝转为轻度(据说脂肪脱离需要时间，所以不能马上恢复正常)，肝功能回复正常。总体感觉自己的精力和体力都比过去好很多。 </p>
+
+<h2>适度锻炼</h2>
+
+<p>因为工作很忙，锻炼其实是个比较奢侈的事情，不过只有有空，我会尽量游泳和打球，最近锻炼的也很多，多锻炼对身体有好处。但我不认为应该通过剧烈运动来减肥。剧烈运动一则无法持久，二来很容易挫伤积极性，物极必反。减肥的目的是为了身体健康，不是为了减肥而减肥。 </p>
+
+<h2>严格监视体重变化</h2>
+
+<p>我每天早晚上秤测量体重，记录在我的iPad里面(随便用什么)，精确掌握自己体重变化可以严格监督自己。比方说哪天应酬大吃了一顿，回来上秤一看，完了，飙升了1公斤，半个月到1个月的减肥努力化为泡影！ 很直观的反馈，如此几次教训下来，再也不敢晚上开戒了。而当你看到体重每天0.1的匀速下降，也颇有成就感，这样才能督促你每天控制好饮食，适度锻炼，保持良好作息，因为你每天都得到了成就。 </p>
+
+<p>我的减肥心得就是这么几条，其实还是要坚持，有耐心，体重很快就减下来了。</p>
+ ]]>
+      </description>
+      <pubDate>Mon, 25 Feb 2013 23:09:44 +0000</pubDate>
+      <link>http://robbinfan.com/blog/30/lose-weight-experience</link>
+      <guid isPermaLink="false">http://robbinfan.com/blog/30/lose-weight-experience</guid>
+    </item>
+    <item>
+      <title>新的个人网站开张 robbinfan.com</title>
+      <description>
+        <![CDATA[ <p>在这个很二的2月22日，我的个人网站 <a href="http://robbinfan.com">robbinfan.com</a> 正式上线开张。网站源代码是开源的，MIT License，托管在Github上：<a href="https://github.com/robbin/robbin_site">robbin_site</a> </p>
+
+<p>我的个人网站文章分成了两类：一类是传统意义上的博客文章，记录人生成长历程上的所思所想；另一类是学习笔记，发布个人总结性的产品类学习笔记，技术类文档，我个人觉得有价值收藏下来的文章。学习笔记类的文章都是按照最近内容更新排序的，类似Evernote的默认排序，我准备今后多写一些互联网产品设计，研发，运营，团队建设类的文章，多和同行交流。</p>
+
+<p>可能有人会好奇，搭建个人网站为何不用现成的软件例如WordPress呢？为何要自己编写和搭建个人网站呢？</p>
+
+<ul>
+<li><p>一个原因是我现在习惯用Markdown格式写文档，电脑上存了很多用Markdown写好的学习笔记和总结性文章，但是一直没有找到一个满意的支持Markdown格式的在线发布站点。尝试了很多解决方案，都觉得不太方便，最后想不如自己开发一个算了；</p></li>
+<li><p>另一个原因是发现有不少人和我有类似的需求，很多人因为喜欢Github的Markdown格式支持，将自己的博客直接放在Github上，甚至我团队的工程师们也很想搭一个支持Markdown格式的web软件当wiki来用，编写用于内部分享和交流的文档。所以让我感觉编写这么一个软件还是很有意义的。</p></li>
+</ul>
+
+<p>所以一不做二不休，立刻动手，利用春节前后空闲时间以及春节假期，花了一个多月时间，把我的个人网站写好了。尽管大部分的框架和库都是现成的，不需要我自己写基础组件，也没有什么技术难度，但是我这几年都没有正规写过代码了，还是颇费了一番力气。我的项目代码本身写的不算好，而且也没有写单元测试，所以冒着被骂的风险，硬着头皮开源了，大家请轻轻拍砖。另外，虽然这个站点的功能非常简单，但是软件本身还是有些亮点：</p>
+
+<ul>
+<li><p>站点用ruby编写的，没有用大家耳熟能详的ruby on rails框架，用了基于Sinatra封装的轻量级框架padrino，性能比rails好。另外我的代码里大量使用了缓存技术，性能应该相当不错：我搭建在VPS上的本站，文章最终页一般处理时间不超过10ms，文章列表页不超过50ms。</p></li>
+<li><p>站点对SEO也很重视，优化了一些对SEO很有帮助的地方：例如文章title和description，URL结构和关键词，发布文章的时候对Google和Baidu的blog ping等等。</p></li>
+<li><p>Markdown语法解析用的是Github开源的库，支持Github风格的Markdown：例如自动转换超链接；换行不必在行末加两个空格；支持```风格的代码区块显示等等；CSS直接用Github站点的，如果你是Github的用户，可能会感觉很熟悉；最后我还加了一个有趣的小功能，点击文章最终页右上角，可以显示Markdown格式原文。</p></li>
+<li><p>我在写个人网站代码的时候，考虑了方便别人用这套代码快速搭建个人网站。所以关于个人信息以及需要定制信息和帐号的地方，都写到配置文件<code>config/app_config.yml</code>里面了，甚至包括关闭页脚的网站备案信息。所以仅仅通过修改这个配置，你可以不必改动任何一行代码，快速搭建个人网站。我只保留了页脚的个人联系信息和本站链接，如果你想去掉也无妨。</p></li>
+<li><p>站点本身是支持多帐号的，也可以当作简单的多人协作的内容发布站点使用。评论系统不对匿名帐号开放，避免不必要的垃圾评论，但提供了微博帐号登录评论，对大多数人来说已经足够了。</p></li>
+</ul>
+ ]]>
+      </description>
+      <pubDate>Fri, 22 Feb 2013 22:50:08 +0000</pubDate>
+      <link>http://robbinfan.com/blog/29/my-new-website</link>
+      <guid isPermaLink="false">http://robbinfan.com/blog/29/my-new-website</guid>
+    </item>
+    <item>
+      <title>范凯的自我介绍</title>
+      <description>
+        <![CDATA[ <p><img src="http://robbinfan.com/uploads/attachment/file/11/robbin.jpg" alt="robbin"></p>
+
+<h2>范凯</h2>
+
+<p>网名robbin, 现任CSDN CTO，曾经的JavaEye网站创始人。</p>
+
+<h2>格言</h2>
+
+<p>信仰互联网，爱好产品，爱好技术，爱好创业，Entrepreneur nerd。</p>
+
+<h2>愿望</h2>
+
+<p>用成功的互联网创新产品影响和改善人们的生活，让自己的人生留下点值得自豪的印记。</p>
+
+<h2>擅长</h2>
+
+<ul>
+<li>互联网产品设计，特别是社区型产品设计</li>
+<li>互联网产品运营，特别是社区型产品运营</li>
+<li>软件架构设计和编程，特别是基于Web的软件架构设计和编程</li>
+</ul>
+
+<h2>自白</h2>
+
+<p><a href="http://robbinfan.com/blog/20/my-life">robbin的自白：You&#39;ve got to find what you love</a></p>
+
+<h2>时间线</h2>
+
+<table>
+  <tr>
+    <td>2010 - Now</td>
+    <td>现任CSDN CTO，历任CSDN VP of product and technology, product director</td>
+  </tr>
+  <tr>
+    <td>2010.5</td>
+    <td>JavaEye被CSDN收购</td>
+  </tr>
+  <tr>
+    <td>2006 - 2010</td>
+    <td>运营创业公司JavaEye，提供基于社区的媒体服务和招聘服务</td>
+  </tr>
+  <tr>
+    <td>2006.8</td>
+    <td>成立公司创业，Founder of JavaEye</td>
+  </tr>
+  <tr>
+    <td>2003 - 2006</td>
+    <td>Architect，PM，Consultant</td>
+  </tr>  
+  <tr>
+    <td>2003.9</td>
+    <td>创立技术社区网站JavaEye</td>
+  </tr>
+  <tr>
+    <td>1998 - 2003</td>
+    <td>Engineer，Architect，PM</td>
+  </tr>  
+  <tr>
+    <td>1994 - 1998</td>
+    <td>大学，就读于天津大学</td>
+  </tr>  
+  <tr>
+    <td>1991 - 1994</td>
+    <td>高中，就读于东风汽车公司一中</td>
+  </tr>  
+  <tr>
+    <td>1976.3</td>
+    <td>出生</td>
+  </tr>    
+</table>
+ ]]>
+      </description>
+      <pubDate>Fri, 22 Feb 2013 00:18:12 +0000</pubDate>
+      <link>http://robbinfan.com/blog/28/about-robbin</link>
+      <guid isPermaLink="false">http://robbinfan.com/blog/28/about-robbin</guid>
+    </item>
+    <item>
+      <title>精益创业指导创新产品开发</title>
+      <description>
+        <![CDATA[ <p>创业是在极端不确定情况下开发新产品或者新服务。在创业早期，谁是客户，客户认为什么东西有价值都是未知的。  </p>
+
+<p>精益创业总结起来就是用3个动词驱动3个名词的循环迭代过程：IPD -&gt; BML ，即：</p>
+
+<pre><code>idea -&gt; (build) -&gt; product -&gt; (measure) -&gt; data -&gt; (learn)
+</code></pre>
+
+<p>建立<code>validated learning</code>，然后推动下一轮迭代。精益之于创业，等同敏捷之于开发，都强调快速迭代，小步前进，测试(测量)驱动。每次精益产品循环的一个过程都是从<code>未经证实的假设 -&gt; 经证实的认知</code>。 </p>
+
+<h2>精益迭代 (Build -&gt; Measure -&gt; Learn)</h2>
+
+<p><img src="/uploads/attachment/file/1/lean_startup_lifecycle.png" alt="Lean Startup Lifecycle"></p>
+
+<pre><code>（想法）-&gt; 构建 -&gt;（产品）-&gt; 测量 -&gt;（数据）-&gt; 认知
+</code></pre>
+
+<p>创业团队从一个想法开始，在多次迭代过程中持续地构建、测试和优化产品，为产品注入真正的价值。由于创业活动的不确定性很强，最初的想法和现实之间必然存在差距。精益创业的关键就是：**快速迭代，小步前进和测试驱动**，以实现对宝贵的时间和资源的最大化利用。</p>
+
+<h3>精益迭代的目标：</h3>
+
+<ul>
+<li>加快迭代的速度，让每次迭代尽可能短。</li>
+<li>每次迭代结束，得到可证实的认知，进行调整或者转型。</li>
+</ul>
+
+<h2>想法：未经证实的假设 (Unproven Assumption)</h2>
+
+<p>每个商业计划都是从一系列假设开始的，在这些假设的基础上来阐述公司发展战略和商业模型。但是我们不能保证这些假设一定是正确的，因此创业公司的早期努力的目标就是尽快验证这些假设。创业公司的假设包括：</p>
+
+<ul>
+<li>价值假设 (value hypothesis) : 产品对用户来说是否有价值，用户是否会使用，是否会付费？</li>
+<li>增长假设 (growth hypothesis) : 产品提供的价值是普遍需求吗？用户规模能够快速增长吗？</li>
+</ul>
+
+<p>Facebook刚推出时，只为有限的几个大学社区提供服务，也没有做任何市场推广。但一个月以后，它已经吸引了3/4的哈佛本科生注册，且超过半数用户每天都会访问Facebook。这两项数值充分说明了该产品满足增长假设和价值假设。</p>
+
+<h2>认知：经证实的认知 (Validated Learning)</h2>
+
+<p>当你提出一个idea，它是一个<code>未经证实的假设(Unproven Assumption)</code>，精益创业通过一系列快速迭代，将它转变为一个<code>经证实的认知</code>，来调整你的产品方向。</p>
+
+<h3>案例IMVU</h3>
+
+<p><img src="/uploads/attachment/file/2/imvu.png" alt=""></p>
+
+<p>IMVU做的是切入的是IM市场，提供了三维虚拟人像聊天服务。</p>
+
+<p>假设：</p>
+
+<ol>
+<li>用户不会愿意加入一个全新的IM社交网络</li>
+<li>用户会容易接受使用现有IM的附加软件</li>
+<li>用户会邀请自己的IM好友使用</li>
+<li>需要兼容各大主流IM的互通性</li>
+</ol>
+
+<p>认知：</p>
+
+<ol>
+<li>用户不介意安装和使用新的IM软件</li>
+<li>用户不想用陌生的IM软件邀请好友</li>
+<li>用户需要一个陌生交友的IM社交网络</li>
+</ol>
+
+<h2>构建：最小可行化产品 MVP (Minimium Viable Product)</h2>
+
+<p>投入最少的资源构建一个刚刚能够体现创新点或核心价值的产品，并立刻将其投入市场。客户需求只有在实际使用中才能验证，再多的前期调研也只能发现客户认为他们想要什么，而不是客户实际上想要什么。因此在不了解客户真实需求的情况下，只会多做多错。  </p>
+
+<p>一般意义上，功能越多的产品，将会有越多部分不满足客户的实际需求，因而变成无用功。很多人不肯把一个简陋的产品推给客户，但这实际上是一种病态的完美主义。比认为产品简陋更糟糕的是客户对产品不屑一顾。认为产品简陋，至少说明客户用了这个产品。如果客户对产品的核心价值表示赞许，那正可以在此基础上进一步完善；如果客户表示不满意，那就应该改弦易辙。</p>
+
+<h3>案例Zappos</h3>
+
+<p>Zappos要建立网上鞋店，为了验证这个idea是否可行，用户是否会到网站上面去买鞋，创始人跑到人家的鞋店去和老板商量，允许他给店家所有的鞋子拍照片，将这些照片放到Zappos网站上面展示，验证销售鞋子，收取货款，处理退货和客服支持的全部流程。</p>
+
+<h3>案例Dropbox</h3>
+
+<p><img src="/uploads/attachment/file/3/dropbox.png" alt=""></p>
+
+<p>Dropbox公司创立时，希望将网盘与不同类型的OS进行无缝集成，该功能的实现需要较高的技术门槛，也需要一定周期。因此在创业初期，Dropbox很难拿出原型呈现给用户和投资者。于是Drew Houston（Dropbox的CEO）做了一个3分钟的视频演示放在网站首页，在演示中描述了产品的功能特点。这段演示令产品的预订者在一夜之间从5000人增至75000人，很好地验证了市场对这一概念的接受程度。</p>
+
+<p><video width="640" height="352" controls="controls"><br>
+  <source src="http://en.robbinfan.com/dropbox_intro.mp4" type="video/mp4"><br>
+  Your browser does not support the video tag.<br>
+</video></p>
+
+<h3>案例FotT</h3>
+
+<p>Food on the Table(FotT)，一家帮助家庭用户提供菜蔬预订配送和食谱建议的互联网公司。FotT最初只有一个用户。在没有任何IT手段辅助的情况下，FotT的CEO和产品VP每周上门收集客户订单并为其配送菜蔬。在这种极度没有效率的原型服务中，FotT逐步地累积了对市场需求的认识并扩大了客户群。随着用户的增多，他们逐渐添加了邮件下单、菜单推荐、网上支付等各种自动化功能。这过程中每一项功能的增加都不是源于空想，而是源于实际的、迫切的用户需求。目前，FotT提供覆盖许多美国城市的食谱选择、菜蔬团购和配送的自助式网络服务。</p>
+
+<h3>案例Groupon</h3>
+
+<p>Groupon是团购的鼻祖，Groupon创业初衷是做一个叫做热点的集体行动平台，把人们聚集起来共同行动，但是效果不佳。08年底创始人安德鲁梅森开始尝试团购的idea。为了快速构建MVP产品，用WordPress搭建了简单的网站，用FileMaker保存优惠券，用脚本把PDF格式的优惠券通过Email群发出去。以这种方式支撑了公司7个月快速的业务增长。</p>
+
+<h3>MVP的质量担忧</h3>
+
+<p>MVP与开发高质量产品并不矛盾。你应该放弃一切对你需要验证的假设没有直接用处的功能。无论某项功能在开发的时候看起来多么重要，只要它不在你认知流程所需之内，都是浪费资源。简单说就是：集中一点最核心功能，其他所有功能全部砍掉不做，简化产品到极致。</p>
+
+<p>新产品必须而且只能抓一个痛点功能，围绕一个痛点把功能做透。任何痛点功能之外的其他功能都是对产品没有信心的表现，必然失败。一个痛点功能如果做透了产品还没成，说明用户刚需没踩准，换个痛点功能重新做。每次做且仅做单痛点功能产品，不行就换另一个单痛点功能产品，而不是堆砌了一个多痛点的产品，让用户去换不同痛点去试。</p>
+
+<h2>测量：创新核算 (Innovation Accounting)</h2>
+
+<p>测量的目的是通过一系列真实有效的指标来判断，当前的产品相对于上一个版本，是否带来了真正的价值提升。测量的指标非常重要，不能以总量的变化、而应以增长速度的变化来衡量产品的价值。例如，对一项头一个月有500名注册用户、头一年有6000名用户的新服务而言，虽然用户总量在持续增长，但每月的新增用户数却基本持平。那只能说明，它在这一年中所做的更新或变化，并未增强对潜在用户的吸引力。因此，真正有效的测量指标必须要能够揭示产品特性的变化与业务增速之间的因果关系，以便识别正确的增长引擎。</p>
+
+<h3>创新核算的步骤</h3>
+
+<ol>
+<li>确定基准线：搜集MVP产品的基础运营数据，如用户自然增长率、留存率、活跃度和ARPU值等，确定测量的基准线</li>
+<li>优化引擎：尝试把增长引擎从基准线逐步优化到理想状态，任何改动都必须以改进某项关键数据为目标，无数据导向的产品改动都是盲目和可耻的</li>
+<li>坚持或者转型</li>
+</ol>
+
+<h3>案例IMVU的同期群分析 (cohort analysis) <a href="http://www.keplarllp.com/blog/2012/04/cohort-analyses-for-digital-businesses-an-overview">cohort</a></h3>
+
+<p>不是看测量指标的累计总数(虚荣指标)，而是对测量用户进行分组对比测试，观测不同分组之间的数据差异性。</p>
+
+<p><img src="/uploads/attachment/file/4/cumulative_metrics.png" alt=""></p>
+
+<p><img src="/uploads/attachment/file/5/cohort-analysis-visualisation.jpg" alt=""></p>
+
+<p>尽管IMVU注册用户数量始终上升，但是同期群分析显示用户黏性没有增长，而且用户付费购买率只有1%。</p>
+
+<h3>案例Grockit的对比测试(A/B Test)和看板管理 (Dashboard management)</h3>
+
+<p><img src="/uploads/attachment/file/6/grockit.png" alt=""></p>
+
+<p>Grockit的对比测试：Grockit开发了一项新的功能，先试用再注册。允许用户先体验过产品之后，当必须使用某些功能的时候才注册。这是很多网站的最佳实践，而且从直觉上会认为这样做也能够提升用户的注册率和留存率。但是Grockit开发了此项功能之后，采用对比测试发现，并没有提升任何数据指标，开发此项功能完全无用。</p>
+
+<p>产品功能列表分为以下4种状态：  </p>
+
+<ol>
+<li>待开发</li>
+<li>开发中</li>
+<li>已完成</li>
+<li>已验证</li>
+</ol>
+
+<p><img src="/uploads/attachment/file/7/grockit_dashboard.jpg" alt=""></p>
+
+<p>当D、E和A没有被验证之前，B和C即使已经完成，也不能被挪入已完成队列中。H和I也是同理，在开发中队列已满的情况下，H和I功能不允许进入开发阶段。</p>
+
+<p>看板管理的规则：  </p>
+
+<ol>
+<li>同时只允许有3项工作任务出现在每个阶段的队列中，一旦队列填满，就不允许再加入新任务。</li>
+<li>验证一项功能必须通过对比测试，用数据指标测量它对产品的作用，没有对比测试，不准验证通过。</li>
+<li>每次只验证一项功能，如果多个功能同时验证，则无法得到准确的数据测量结论。</li>
+<li>一项功能只有通过验证阶段，才能从看板上删除，如果验证失败，发现这个功能对数据指标不能带来提升，那么必须把和它相关的所有功能从看板中删除。</li>
+<li>团队的工作量不是根据完成多少功能来衡量的，而是根据通过对比测试的，经证实的认知数量来衡量的。</li>
+</ol>
+
+<h3>Votizen的四次转型</h3>
+
+<p><img src="/uploads/attachment/file/8/votizen.png" alt=""></p>
+
+<h4>Votizen第一次尝试：选民社交网络</h4>
+
+<p>Votizen的创业idea当中，需要验证4个假设：  </p>
+
+<ol>
+<li>用户对选民社交网络感兴趣，使用注册率指标</li>
+<li>用户必须是已经注册的选民，使用激活率指标</li>
+<li>用户在网站上能够产生行为，使用留存率指标</li>
+<li>用户把网站推荐给朋友使用，使用传播率指标</li>
+</ol>
+
+<table>
+    <thead>
+        <tr>
+            <td>开发时间</td>
+            <td>投入资源</td>
+            <td>注册率</td>
+            <td>激活率</td>
+            <td>留存率</td>          
+            <td>传播率</td>          
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>3个月</td>
+            <td>1200美元</td>
+            <td style="color:red">5%</td>
+            <td style="color:red">17%</td>
+           <td>0</td>
+           <td>0</td>
+        </tr>
+        <tr>
+            <td>2个月</td>
+            <td>5000美元</td>
+            <td>17%</td>
+            <td>90%</td>
+           <td style="color:red">5%</td>
+           <td style="color:red">4%</td>
+        </tr>
+        <tr>
+            <td>3个月</td>
+            <td>14000美元</td>
+            <td>17%</td>
+            <td>90%</td>
+           <td style="color:red">8%</td>
+           <td style="color:red">6%</td>
+        </tr>
+    </tbody>
+</table>
+
+<p>留存率和传播率偏低证明假设3和假设4不成立，产品需要转型。创始人Davy根据搜集到的用户反馈，决定放大式转型，即聚焦产品中的一项受用户欢迎的功能。</p>
+
+<h4>Votizen第二次尝试：社交游说平台 @2gov</h4>
+
+<p>业务增长方式转变为小额付费，因此需要测量用户付费率和用户ARPU值，对比转型之前的数据如下：  </p>
+
+<table>
+    <thead>
+        <tr>
+            <td>开发时间</td>
+            <td>投入资源</td>
+            <td>注册率</td>
+            <td>激活率</td>
+            <td>留存率</td>          
+            <td>传播率</td>          
+            <td>付费率</td>          
+            <td>ARPU值</td>            
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>8个月</td>
+            <td>20000美元</td>
+            <td>17%</td>
+            <td>90%</td>
+           <td>8%</td>
+           <td>6%</td>
+           <td>无</td>
+           <td>无</td>
+        </tr>
+        <tr>
+            <td>4个月</td>
+            <td>30000美元</td>
+            <td>42%</td>
+            <td>83%</td>
+           <td>21%</td>
+           <td>54%</td>
+           <td style="color:red">1%</td>
+           <td style="color:red">极小</td>
+        </tr>
+    </tbody>
+</table>
+
+<p>测量数据表明，用户留存率和传播率都不错，满足增长假设，但是用户付费率太低，ARPU值太低，不满足价值假设，无法支撑一项盈利的业务。</p>
+
+<h4>Votizen第三次尝试：转型做B2B，为大型组织服务</h4>
+
+<p>客户细分市场转型，从B2C转型为B2B。3个月后发现大型组织客户的签单达成交易非常困难，不是产品的早期使用者，创业转型再次失败。</p>
+
+<h4>Votizen第四次尝试：自助销售平台 @2gov</h4>
+
+<table>
+    <thead>
+        <tr>
+            <td>开发时间</td>
+            <td>投入资源</td>
+            <td>注册率</td>
+            <td>激活率</td>
+            <td>留存率</td>          
+            <td>传播率</td>          
+            <td>付费率</td>          
+            <td>ARPU值</td>            
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td>8个月</td>
+            <td>20000美元</td>
+            <td>17%</td>
+            <td>90%</td>
+           <td>8%</td>
+           <td>6%</td>
+           <td>无</td>
+           <td>无</td>
+        </tr>
+        <tr>
+            <td>4个月</td>
+            <td>30000美元</td>
+            <td>42%</td>
+            <td>83%</td>
+           <td>21%</td>
+           <td>54%</td>
+           <td>1%</td>
+           <td>极小</td>
+        </tr>
+        <tr>
+            <td>3个月</td>
+            <td></td>
+            <td></td>
+            <td></td>
+           <td></td>
+           <td></td>
+           <td></td>
+           <td></td>
+        </tr>
+        <tr>
+            <td>1个月</td>
+            <td></td>
+            <td>51%</td>
+            <td>92%</td>
+           <td>28%</td>
+           <td>64%</td>
+           <td style="color:red">11%</td>
+           <td style="color:red">0.2PM</td>
+        </tr>       
+    </tbody>
+</table>
+
+<p>付费率从1%提升到11%，每条消息收费0.2美元，验证了商业模型。Votizen总共进行了四轮精益产品迭代过程，迭代速度从8个月，4个月，3个月到1个月，迭代速度越来越快。精益创业的目标就是：尽快用尽可能少的时间和资源完成尽可能多的迭代过程。</p>
+
+<h3>转型 (Pivot)</h3>
+
+<p>每次迭代结束，创业者可以有两个选择，继续或转型。如果分析结果表明之前的假设基本正确，在学习过程中实现的小的改变让产品越来越趋向于假设中的理想状态，那么自然应当保持。</p>
+
+<p>如果数据不理想，是继续坚持改进，还是放弃转型呢？决策应该取决于你是否通过这次精益迭代获得了有价值的“经证实的认知”。如果没有得到经证实的认知，就盲目放弃无疑是错误的。但如果再怎么努力，假设也与现实渐行渐远，则可能需要通过转型对假设做一些本质性的改变，这种改变可能涉及到创新的各个层面：核心技术、应用模式、目标市场、目标需求、增长模型、推广渠道等等。至于到底哪些因素的改变会带来最佳效果，可以在下一轮迭代中验证。</p>
+
+<p>为了处理有太多新的想法需要验证的情况，创业者可以用之前某个较为稳定的产品版本作为基线，在此之上升级出多个平行的版本，展开多个循环分别验证新想法的合理性，剔除其中不佳的部分，并将较好的想法合并到下一个基线当中。</p>
+
+<h4>转型类别</h4>
+
+<ol>
+<li>放大转型</li>
+<li>缩小转型</li>
+<li>客户细分市场转型</li>
+<li>客户需求转型</li>
+<li>平台转型</li>
+<li>商业架构转型</li>
+<li>价值获取转型</li>
+<li>增长引擎转型</li>
+<li>渠道转型</li>
+<li>技术转型</li>
+</ol>
+
+<h3>驱动式精益产品迭代 - 敏捷软件开发</h3>
+
+<p>产品迭代过程是：<code>Build -&gt; Measure -&gt; Learn</code>，但是制订产品迭代计划是反向驱动式的：  </p>
+
+<ol>
+<li>客户市场细分：打算给哪个目标用户群体提供服务？</li>
+<li>价值主张假设：打算给目标用户提供什么服务？希望获得哪些“经证实的认知”？(必须包括价值假设和增长假设)</li>
+<li>测量数据指标：为了验证价值假设和增长假设，需要观测哪些数据指标？</li>
+<li>规划产品功能：为了测量到数据指标，应该开发哪些产品功能来获取数据？</li>
+</ol>
+
+<p>即先建立假设,然后设置数据指标，最后才描述产品功能。做一个产品是为了验证假设和获取测量数据服务的。这类似于测试驱动开发方法学：  </p>
+
+<pre><code>1. 描述用户故事(user story)  -&gt; 价值主张假设
+2. 编写测试用例              -&gt; 建立观测数据指标
+3. 编写功能代码              -&gt; 开发产品功能
+4. 让测试用例跑通            -&gt; 搜集数据验证假设
+</code></pre>
+
+<p>我们错误的做法是：看到一个产品流行了，然后想到我也要做一个；或者为了达到某个所谓的战略目标，去寻找看似可以满足这个战略目标的产品。完全没有从用户需求出发，没有数据驱动意识。等到产品做出来之后，还没有想过目标用户定位问题，没有想过产品功能需要验证哪些假设，没有想过建立测量数据体系。总之，应该注意：</p>
+
+<ul>
+<li>先建立假设，然后设置数据指标，最后描述产品功能。做产品是为了验证假设和获取测量数据服务的。</li>
+<li>先设置数据指标，后描述产品功能，而不是先开发产品上线，然后才考虑测量数据</li>
+<li>开发产品功能是为了用数据验证假设，没有清晰的目标导向，没有完整的观测数据指标，无的放矢的开发产品功能是可耻的</li>
+</ul>
+
+<h2>数据：增长引擎 (Engine of growth)</h2>
+
+<p>增长引擎是早期创业公司用来实现可持续增长的机制。创业公司不会饿死，只会撑死。总有无数让产品变得更好的想法飘荡在空中，但大多数想法带来的效果微乎其微，只能算是产品优化而已。早期创业公司必须关注能产生经证实的认知的重大增长方面。可持续增长方式主要有：</p>
+
+<h3>黏着式增长引擎</h3>
+
+<p>通过增加已有客户对产品的黏着度，提升产品的价值。因此关键数据指标：**用户留存率和用户活跃度** 。用户的自然增长率必须超过用户流失率，才能保证复合增长率(自然增长率 - 流失率)。</p>
+
+<p>例如社区网站，我们不能仅仅看每天新增用户注册量，而应该精确核算注册用户的回访率，即用户注册之后，在一段时间之内回访的频率。使用同期群分析，观测用户留存率。例如网站的签约招聘客户，关键指标是续单率，决定了业务的增长潜力。</p>
+
+<h3>病毒式增长引擎</h3>
+
+<p>具有病毒式增长特质的产品依靠人拉人传播。用户并非刻意充当传播者，而是产品设计了潜在的用户邀请完成任务的环节，只要用户使用产品，就自然带动了增长。关键数据指标：**病毒系数** ，病毒循环的速度取决于病毒系数。当病毒系数大于1.0以上，将带来用户的几何级数增长。</p>
+
+<p>例如开心网的游戏：买卖奴隶，停车大战，五分钟的开心农场。邀请用户参与游戏互动是产品本身的一部分，只要你玩游戏，就会产生病毒式传播；例如Dropbox的任务系统，你要想获得更多的存储空间，可以通过邀请用户来获得；Facebook也实现了病毒式增长。</p>
+
+<h3>付费式增长引擎</h3>
+
+<p>典型的代表是Google关键词广告，关键数据指标：**用户获取成本和用户ARPU值** 。只要用户ARPU值高于用户获取成本，就可以实现可持续增长。</p>
+
+<p>一项业务可以同时运行几种增长引擎，即使是同一产品，在其演化的不同阶段，采用的增长引擎也可能是不一样的。但是成功的创业公司在一个阶段只关注一种增长引擎，优化好增长引擎。同时建立三种引擎驱动的业务增长需要的运营技能非常复杂，欲速则不达。</p>
+
+<h1>四步创业法 (The Four Steps)</h1>
+
+<p><img src="/uploads/attachment/file/9/4steps.png" alt=""></p>
+
+<p>揭示创业公司的发展阶段理论。如上图所示，一个创业公司会经过上述4步，两个发展阶段：  </p>
+
+<ul>
+<li><p>创业探索阶段：验证产品的价值主张(value proposition)和商业模型是否成立，不需要成立公司</p>
+
+<ol>
+<li>Customer Discovery 进行用户市场细分，寻找天使用户，通过和用户访谈，确定产品方向</li>
+<li>Customer Validation 开发MVP产品，验证假设，如果不成功，转型到第1步<br>
+<em>商业模型得到验证的标志：成单，MVP产品有人买单。精益产品迭代过程应用于创业探索阶段：寻找产品基本价值主张，验证商业模型</em></li>
+</ol></li>
+<li><p>创业执行阶段：开拓用户，建立公司组织  </p>
+
+<ol>
+<li>Customer Creation - 投入营销资源，开拓用户渠道</li>
+<li>Company Building - 成立公司，建立组织架构<br>
+<em>精益产品迭代过程应用于创业执行阶段：强化产品的价值主张，树立竞争门槛，拓展用户</em></li>
+</ol></li>
+</ul>
+
+<p>当产品的价值主张和商业模型尚未得到验证的时候，切忌投入营销资源，强行拉动用户增长，这种做法是自杀行为；只有当产品的价值主张和商业模型被验证成功以后，才能逐渐导入营销资源，导入一批测量效果进行反馈改进，如此循环迭代，总结和积累“经证实的认知”。</p>
+
+<h2>天使用户 (Innovators)</h2>
+
+<p>早期小型试验的意义不在于找出普通用户，而是要找到“天使用户”，就是那些最迫切需要产品，对你的产品相见恨晚的的人。他们对错误更容易谅解，更渴望提供反馈意见，愿意传播产品。天使用户的实证案例，纯银，白鸦，四海邮团队在微博上对彩程设计产品Tower.im的吹捧和推荐。</p>
+
+<h2>客户开发方法 (Customer Development)</h2>
+
+<ol>
+<li>从需求调研开始建立假想的概念模型，先考虑少数用户的需求，避免广种薄收。</li>
+<li>从概念模型开始，寻找天使用户去验证概念模型，检验产品是否能解决他们亟待解决的问题。</li>
+<li>验证概念模型的目的，并非为了修改产品功能，而是为了寻找天使用户，为了用天使用户来验证我们的假设，而不是迎合用户的奇思怪想，因此切忌被用户牵着鼻子走，用户说什么就改什么。</li>
+</ol>
+
+<h2>构建价值主张</h2>
+
+<ol>
+<li>具有情感吸引力，应该抓住用户的情感而不是理智，应该让用户不由自主的掏腰包，而不是下意识的按计算器</li>
+<li>要凸显优势，让用户感到产品可以解决他们的问题</li>
+<li>名副其实，不要虚假宣传</li>
+<li>要符合相应的市场类型区分</li>
+</ol>
+
+<h2>技术接纳生命曲线(Technology Adoption Life Circle)</h2>
+
+<p><img src="/uploads/attachment/file/10/chasm.jpg" alt=""></p>
+
+<p>鸿沟理论 (Chasm theory)</p>
+
+<ol>
+<li>不同用户群接纳新技术新产品需要的时间不同。根据接纳速度快慢，可以分为：技术爱好者、产品尝鲜者、实用主义者、保守主义者和怀疑主义者五类。</li>
+<li>技术爱好者和产品尝鲜者构成了早期市场；实用主义者和保守主义者构成了主流市场。</li>
+<li>相邻的用户群体时间存在接纳鸿沟，其中早期市场迈向主流市场的鸿沟是最难跨越的。不同用户需求和消费习惯是导致鸿沟出现的主要原因。</li>
+<li>跨越鸿沟最大的困难在于：赢得早期市场的成功经验难以运用到主流市场。为了赢得主流市场青睐，需要全新的策略。</li>
+</ol>
+
+<h2>精益创业原则</h2>
+
+<ol>
+<li>创业第一天就设定收入目标 Revenue Goal from Day One </li>
+<li>持续的客户互动 Continuous Customer Interaction</li>
+<li>如果没有收入，就不要扩张 No Scaling until Revenue</li>
+<li>产品开发周期-以小时计而不是月或者年 Product release cycle in hours not years</li>
+<li>产品开发功能- 最少的功能，最大的客户覆盖 Minimum Feature Sets, Maximum Customer Coverage</li>
+<li>产品开发 – 与客户拓展并驾 Coupled with Customer Development</li>
+</ol>
+ ]]>
+      </description>
+      <pubDate>Mon, 10 Dec 2012 00:00:00 +0000</pubDate>
+      <link>http://robbinfan.com/blog/27/lean-startup</link>
+      <guid isPermaLink="false">http://robbinfan.com/blog/27/lean-startup</guid>
+    </item>
+    <item>
+      <title>晒晒我们的开源项目</title>
+      <description>
+        <![CDATA[ <p>我们的研发团队是一支mini型研发团队，目前共有研发人员13人。由于网站产品维护的历史原因，这13人的研发团队分为4支小组，分别是：Ruby研发小组5人；PHP研发小组4人；.net研发小组2人，Java搜索小组2人。 </p>
+
+<p>别看我们研发人员这么少，但是我们研发人员战斗力很强，我们维护和开发着十多条产品线。在我们开发自身产品的过程中，也积累了一些比较通用的组件，一些对大家来说有用的工具。因此从今年下半年开始，我们陆续将一些组件和工具开源出来，哪怕这些项目的质量并不是那么高，也希望能够给社区带来一点点自己的贡献。 </p>
+
+<p>以下简要介绍一下我们已经开源的项目，今后我们还会努力开源更多的东西和大家交流和分享： </p>
+
+<p>1、Ansj中文分词 - 开源的高准确率Java中文分词器 </p>
+
+<p>项目Github地址：<a href="https://github.com/ansjsun/ansj_seg">https://github.com/ansjsun/ansj_seg</a> </p>
+
+<p>这是基于大名鼎鼎中科院的Ictclas中文分词算法编写的Java实现版本，比常用的开源mmseg4j的分词准确率高。目前我们自己站内的搜索将逐渐从mmseg4j算法替换成Ansj中文分词算法。 </p>
+
+<p>2、ServiceFramework - 开源的羽量级Java Web服务框架 </p>
+
+<p>项目Github地址：<a href="https://github.com/allwefantasy/ServiceFramework">https://github.com/allwefantasy/ServiceFramework</a> </p>
+
+<p>我们基于Java的开源搜索框架lucene编写了网站的分布式搜索和Tag文章分类服务。因为需要向前端的Web应用程序提供搜索和Tag服务接口API，所以我们编写了这个羽量级的Java框架软件。它的优点就是羽量级，自身集成了Jetty服务器，MVC，IoC和ORM，让你只需要编写非常少的代码，就可以快速将你的业务逻辑组件以Web API的方式提供服务。 </p>
+
+<p>3、ExportBlog - 开源的通用博客导出工具 </p>
+
+<p>项目Github地址：<a href="https://github.com/sqzhuyi/ExportBlog">https://github.com/sqzhuyi/ExportBlog</a> </p>
+
+<p>这是一个基于.net Winforms编写的通用博客导出工具，支持导出网站包括：CSDN、ITEYE、博客园、新浪、搜狐、和讯、ChinaUnix、网易、51CTO、开源中国、百度空间、QQ空间等等。导出格式支持CHM、PDF、HTML、TXT和EPUB 5种格式文档。详细介绍：<a href="http://blog.csdn.net/sq_zhuyi/article/details/7924776">http://blog.csdn.net/sq_zhuyi/article/details/7924776</a> </p>
+
+<p>4、Secode_level_cache - 开源的Rails对象缓存插件 </p>
+
+<p>项目Github地址：<a href="https://github.com/csdn-dev/second_level_cache">https://github.com/csdn-dev/second_level_cache</a> </p>
+
+<p>Rails的ActiveRecord自身没有带强大的对象缓存功能，这是AR的一个重大的遗憾。早在2008年开始，我们就借鉴了Java强大的ORM框架Hibernate的二级对象缓存编写了这个Rails的AR对象缓存插件，并且一直作为JavaEye网站缓存优化的秘密武器来使用，取得了非常理想的效果。 </p>
+
+<p>现在我们将这个插件从Rails2.x的版本升级到了3.x版本，并且抽取成了一个通用插件，开始应用于新的Rails3.2的项目之上。有志于AR对象缓存优化的ruby程序员不容错过。 </p>
+
+<p>5、limiter － 网站反爬虫和DOS攻击的利器 </p>
+
+<p>项目Github地址：<a href="https://github.com/csdn-dev/limiter">https://github.com/csdn-dev/limiter</a> </p>
+
+<p>早年的JavaEye网站曾经深受DOS攻击和爬虫海量抓取造成的负载过高的困扰，我曾经和这个问题进行了为期几年不懈的斗争，并且在总结几年斗争经验后写了一篇总结性博客文章：互联网网站的反爬虫策略浅析 。当时我基于这个反爬虫策略编写了JavaEye网站的智能防火墙插件，取得了良好的效果。 现在我们将这个插件从JavaEye的源代码中剥离出来，抽取成一个通用的rackware，便于应用于普通的Rails3.x的项目当中。 </p>
+ ]]>
+      </description>
+      <pubDate>Sun, 23 Sep 2012 00:00:00 +0000</pubDate>
+      <link>http://robbinfan.com/blog/26/our-opensource</link>
+      <guid isPermaLink="false">http://robbinfan.com/blog/26/our-opensource</guid>
+    </item>
+    <item>
+      <title>WebObjects的来龙去脉</title>
+      <description>
+        <![CDATA[ <p>WebObjects是乔布斯Next时期搞出来用来做Web开发的纯面向对象的框架，比SUN后来搞的J2EE先进很多，事实上从2002开始Java开源运动颠覆J2EE搞MVC，搞ORMapping，搞工作流什么的，最终这些东西在WebObjects当中都实现了，而且自成体系。 </p>
+
+<p>多说一句，WebObjects是1995年搞出来的，SUN的J2EE大概是1998年搞出来的，很可能借鉴了WebObjects，但是借鉴的不成功。当时Oracle也搞了一个ORMapping框架，名字忘记了，据说也是受WebObjects影响。 </p>
+
+<p>那为什么WebObjects没有流行？我估计是因为Next公司当时在业界影响力太小，后来被苹果收购以后，苹果又是一家消费品公司，而且长期以封闭的姿态出现在业界有关系，大家可能对苹果不太认账，WebObjects社区太小。不过WebObjects其实还是挺优秀的，现在苹果网站都是用WebObjects开发的。 </p>
+
+<p>乔布斯对面向对象编程是非常迷恋的，他在停车场和Google的Eric争论面向对象编程的段子也广为人知。这可能来源于Alan Key，乔布斯的好友兼导师，在施乐搞Smalltalk那拨人的影响，后来Alan Key被乔布斯搞到苹果做Apple Fellow。 </p>
+
+<p>Next曾经和SUN合作搞Objective-C，后来合作破裂了，SUN搞了Java，所以Java很可能早期也受到很多Objective-C和Smalltalk影响。再后来Java如日中天，Next对Objective-C也不是太有信心，所以基于Java开发了WebObjects。这几年随着iOS和Android崛起，Objective-C和Java又火爆起来了，真是纠缠不清的冤家啊。 </p>
+
+<p>从渊源算起来，一个从来不会编程的乔布斯看起来对编程语言的影响还是挺深远的。或者说，当初的那个很不成功的Next公司，对后来技术领域发展的影响是远远超乎人们想象的。某种程度上来说，Next有点像施乐，虽然商业很失败，但技术影响力很远。</p>
+ ]]>
+      </description>
+      <pubDate>Fri, 08 Jun 2012 00:00:00 +0000</pubDate>
+      <link>http://robbinfan.com/blog/25/webobject</link>
+      <guid isPermaLink="false">http://robbinfan.com/blog/25/webobject</guid>
+    </item>
+    <item>
+      <title>大公司的创新思考：体制内创新的困境</title>
+      <description>
+        <![CDATA[ <p>前Google资深工程师，IT畅销书《浪潮之巅》的作者吴军历数了IT行业公司的兴衰发展史，提出了一个令人印象深刻的“基因决定论”，即由于公司基因的影响，当一家大公司想要转型占领新的领域，做出颠覆性创新产品的时候，往往会败得很惨，例如：摩托罗拉，诺基亚，英特尔，微软，尽管在所在的行业占据了无可争议的垄断地位，但是当时代发生变化，行业发生转型以后，都不同程度的衰落了，大公司体制内创新的困境已经成为常态。杰克韦尔奇在谈到这个问题的时候，曾经说过：“管理一条产值为5万美元的新生产线的第一年，要比管理一个销售额为5亿美元的企业的第20年更为困难”。他在《Winning》这本书里面具体提到3条原因：</p>
+
+<ul>
+<li>公司对创新项目的投入不足，特别是业务人员投入不足</li>
+<li>公司对创新项目的前景和重要性宣传太少，反而保持秘而不宣</li>
+<li>公司限制了创新项目的自主权。</li>
+</ul>
+
+<p>所以一般大公司体制内立项的新项目失败的概率是非常高的。我和各大互联网公司的朋友聊天，也听到很多私下的爆料，感叹在大公司里面推动产品创新之艰难。在我们互联网行业，往往大公司做创新产品做不过创业公司，大公司里面做失败的产品可以说是累累白骨：</p>
+
+<h2>大公司严密的制度性约束扼杀了创新的可能性</h2>
+
+<p>大公司的人事制度，财务制度，公司文化，业绩考核方方面面往往是非常严格的，例如详细到公司考勤，请假，调休，财务报销，请款流程，人员招聘，小到公司运维规定方面能不能看视频网站，能不能安装QQ聊天软件，严格的甚至还有不能上网的等等。这些详细的，繁苛的制度以及公司文化对于管理一家几百上千人的公司可能是非常必要的，但是这样的环境往往会扼杀创新的团队和员工。</p>
+
+<h3>案例1</h3>
+
+<p>某个负担公司创新项目使命的部门给员工开出了超高的薪资和豪华的办公室：有洗澡间，有卧室，有免费的饮料冷饮，有家庭影院等等。但唯独考勤制度及其严格，每天早晚打卡按手印，如果迟到要扣工资，招聘流程及其漫长，入职一个人往往要好几个月。某牛人抱着希望而去，但深受考勤之苦，经常迟到，因为工资非常高，考勤罚款也不过九牛一毛，但作为一个对自己要求很高的人，整天被罚款感觉非常糟糕，不到一年离开了。另一牛人做项目需要配置一个UI人员，但是入职流程长达半年，等到黄花菜都凉了，最后等UI入职的时候，该牛人已经无法忍受而辞职了。</p>
+
+<p>分析这个案例，严格的考勤错了吗？谨慎的招聘错了吗？对大公司来说都没错，这些都是应该的，但是对于创新型团队这样的制度则是毁灭性的。</p>
+
+<h3>案例2</h3>
+
+<p>还是说说考勤，某工程师特别有责任心，恰逢公司项目比较忙，周末加班了很多次，累积了很多天的调休假，但是一直没空休假。这一忙就是好几个月，直到有一天人事部门提醒他，你的调休快要过期了，你再不行使，就全部作废。工程师怒了，心想，我给公司加班加点干活，连休假都不舍得，结果到最后要废掉我的带薪假，我TMD啥都不管了，从接到通知的第二天开始休了一周多假，期间的工作当然是只能搁置。</p>
+
+<p>分析这个案例，人事的制度错了吗？似乎没错，调休假不能没有行使期限吧，但是结果呢？让一贯有责任心的工程师不得不暂时放弃自己的责任心。如果团队当中的每个人都不得不精打细算自己的行为，以便于在严格的制度下实现自身利益最大化，你如何能够要求这样的团队做出创新和突破？</p>
+
+<h3>案例3</h3>
+
+<p>某个主管手下有一名优秀的设计师，一天设计师来请假，想请假两个月进行长途旅游。主管一想，虽然请长假有点不舍，但是这个人是优秀人才啊，也在我手下任劳任怨干了一年了；再说搞设计的请假旅游充电很合理啊，这样才能不断有设计灵感啊；况且最近工作不忙。人家乔布斯的Pixar制作《玩具总动员》的时候，创作人员没灵感了，老乔硬是给创作组放了半年的带薪长假，让他们找灵感，咱做不到半年带薪假，但批准两个月停薪假期还是没问题的嘛。事情报到人事部门给挡回来了，人事部门不批。主管说，公司其他部门也有请长假的，他批为什么我不批。人事说，以后都不准了，不能开此例，否则大家都效仿如何办？唯一通融办法就是让设计师自己辞职，等两个月回来后重新录用。主管无奈，只能做设计师的思想工作，告诉他只能这样办了，唯一的损失就是年终奖会少发，因为会按照新入职员工计算工龄。设计师同意了，办理了离职手续。虽然办了离职手续，但毕竟不是真的离职，只是变现的休假两个月，主管想保留设计师所有公司帐号权限和公司邮箱，便于工作联系。但被人事拒绝了，人事部门提出：此人已经办理离职，法律上和公司没有任何关系了，用公司帐号做出了不利于公司的事情怎么办？所以关闭了所有权限，删除了所有帐号和邮箱。这样做也等于彻底断了设计师再回公司的可能性了。</p>
+
+<p>分析这个案例，人事做错了吗？站在维护公司制度的立场上，站在防止公司出现法律纠纷的立场上，人事没错，但是结果就是一个优秀设计师的流失。</p>
+
+<h3>案例4</h3>
+
+<p>再说说报销制度，越是大公司报销制度越严格。有的公司研发部门有购书的预算，但是员工从来不报销，理由就是报销太麻烦，还不如自己买书；有的公司市内出差要详细填写从那里去那里，办理了什么事情，填写不出来？那对不起不能报销；有的公司因为业务需要购买海外在线服务，员工用自己信用卡支付了，到了财务报销被卡住了，你没有发票啊，对不起不能报销，想报销自己去找发票冲吧。这些其实还不算什么，某公司内部使用的ERP系统财务模块报销，报销工作流有几十步流程，让所有人崩溃，很多人干脆放弃报销；最夸张的例子是某公司高层，因为实在厌烦公司报销流程，干脆所有差旅费用全部自掏腰包，不讨那没趣的事情，又因为品德高尚，经常团队聚餐自掏腰包，给团队买各种开发测试机自掏腰包。</p>
+
+<p>分析这些个案例，财务做错了吗？绝对没错。公司财务制度不严谨，一定会出大问题。但是在这样严格的财务制度下，创业创新团队怎么生存？他们因为惧怕报销流程而尽量避免应该去做的市场出差工作，因为惧怕报销流程而尽量避免采购应该体验的海外在线服务，研发测试机器。而那个品德高尚的公司高层，其做法也是备受争议的，何况他能这样做的前提也是因为具备了足够的经济实力做保障，你能要求普通薪水的员工做到这些吗？</p>
+
+<p>凡此种种，类似这样的案例简直数不胜数，每个大公司里面每天都在上演。每个制度都有其合理性，甚至必要性。但是创新型团队是无法在大公司文化下生存下来的。因为大公司的制度会事实上淘汰那些有创新渴望，却无法严丝合缝符合制度化要求的员工。当你对员工的要求是制度化的时候，你只能得到适应制度化工作模式的员工，而无法得到适应创新要求的员工；而当你行使着制度化的管理方式，却要求这些适应制度化管理的员工做出创新项目的时候，其实是南辕北辙的。</p>
+
+<p>总之，大公司做创新项目，最喜欢砸人砸钱，最忽视的就是创新文化制度的建设，没有适合创新团队的生存土壤，光靠砸钱砸人，永远做不出来颠覆性创新产品，创新需要适合创新的土壤。</p>
+
+<h2>在大公司，工作的专注度永远是稀缺资源</h2>
+
+<p>我以前自己创业的时候，只需要做好一个产品，追求一个目标，我那个时候工作并不忙，每天有大把的时间思考怎样把产品打磨好，怎样把社区运营好，做事情的专注度非常高，而高度专注和长久的坚持才是把事情做成功最基本的条件。现在在中小型互联网公司负责管理60个人的部门，每天事情多的忙不过来，我现在分管网站产品，研发，社区运营，系统运维，以及网站客服和内容审核等职能团队，每天处理部门人事，行政，管理，业务，绩效，招聘等等事情就要至少忙半天，此外还有公司管理层会议，部门内部各职能团队任务讨论，产品会议，间或客户或者合作伙伴上门拜访还要出台接待，以及配合其他部门工作，部门协调，凡此种种，占据了工作时间的90%以上。现在回想当年自己创业每天挥霍大把的时间琢磨产品上怎么雕花，简直就是奢侈的浪费啊。</p>
+
+<p>而在大公司里面的那些产品经理和工程师们，比我就可怜的多了，某公司产品经理戏称公司文化就是会议文化，每天各个部门拉到一起从早到晚开会，从上班开到下班，工程师想写点代码都得晚餐以后开始写。个人的工作时间能被用在创新产品上是非常稀缺的，在这种情况下，怎么可能做出创新产品呢？</p>
+
+<h2>大公司做创新项目资源往往严重投入不足</h2>
+
+<p>这个观点看似有点矛盾，我前面不是刚说大公司最喜欢干的事情就是砸钱砸人吗？怎么叫做资源严重投入不足呢？其实一个项目的成功所需要动用的资源，不是简单的砸钱和砸人的问题，而是需要所有相关职能部门紧密配合起来为共同的目标而努力投入资源。光你自己这个项目组砸几个产品设计，砸几个研发，砸几个运营那不叫资源投入，你总不能自己配市场人员，自己配销售人员吧，项目的成功最终也需要依赖其他部门的资源配合。我有一个简单的论断：跨部门调用资源永远是低效率的，凡是体制内创新，如果不是老板亲自调动各个部门资源配合，绝对不能指望跨部门资源配合产生创新型产品，如果团队内部不能配置足够的资源，就无法产生成功的创新型产品。</p>
+
+<p>基于以上三点原因，大公司的体制内创新往往是非常困难的，中外公司，概莫能外。当然，体制内创新并非没有成功案例，乔布斯的苹果公司就是最典型的大公司体制创新的典范，我个人即便不从产品创新角度，仅从管理的角度也非常佩服乔布斯，因为乔布斯的苹果公司挑战并且超越了很多大公司的管理极限。苹果公司之所以能够一次又一次的不断复制着体制内创新的奇迹，是因为苹果公司本质上是一家大型创业公司，而这一点是其他公司难以达到的状态。</p>
+
+<p>大公司体制内创新也并非一定会失败，就拿我们国内互联网行业，就不乏成功的典范，例如：搜狐的搜狗输入法和现在的搜狗公司，新浪的微博产品，腾讯的微信产品，淘宝早期孵化过程。我们观察这些成功案例有一个共同的相似点：都经历了长期的体制外孵化或者成长期。搜狐时代的搜狗输入法叫好不叫座，分拆搜狗公司以后，实现了真正的腾飞；新浪的微博最早是广州的团队做的产品，具备影响力以后才搬到北京总部；腾讯的微信则是远离深圳总部的广州研究院做出来的产品；而淘宝早期秘密成立团队在湖畔花园重新创业则被写成了神话。</p>
+
+<h2>老板开始耽于安逸</h2>
+
+<p>在互联网行业，产业发生变化和转型的速度非常快，强如SUN，Nokia这样的行业霸主衰落也不过是短短几年就完蛋了，当老板的任何时候都不能有松懈的心态，必须“战战兢兢，如履薄冰”。如果老板自己都认为公司已经很成功了，不想再像从前一样那么拼那么累了，整个公司就会松懈下来，得过且过。</p>
+
+<p>一旦老板自己不再投入，就会失去对一线产品和业务的敏感度，就无法独立做出产品决策，必须依赖下属；一旦老板不再投入，就无法对员工实际工作成果做出准确判断，就无法再以员工付出多少作为评定标准，而是看员工是否听话和迎合。当老板必须依赖迎合自己的下属来做决策的时候，下属只会报喜不报忧，公司的业务运转不再以市场为导向；而创业心态的员工是无法在公司生存下来的，只能被迫离职。</p>
+
+<p>所以老板自己没有创业心态，如何要求员工有创业心态呢？如何要求有创新气质的团队在公司当中孵化出来呢？乔布斯和马化腾本人都是很拼命的老板，老乔更是拼到临死前一天还召唤库克开会。因此必须从老板本人开始，以创业的心态开脱创新业务，才能可能做出创新型产品。</p>
+
+<p>杰克韦尔奇对于大公司体制内创新提出了自己的看法：</p>
+
+<ul>
+<li>首先做大笔投入，把最好，最有进取心，最有活力的人放到新业务的领导岗位上。创新团队必须有车库创业精神。</li>
+<li>夸大宣传创新项目的潜力和重要性，创新项目的报告层次必须高很多，甚至直接向CEO负责，在CEO的日程表上占据特殊的位置。</li>
+<li>给予自由度，允许犯错误；让创新项目自己成熟起来。</li>
+</ul>
+
+<p>我觉得针对我看到的很多国内互联网大公司的情况，要想做到体制内创新，需要做出许多改变：</p>
+
+<h2>制度性松绑，搞“经济特区”制度</h2>
+
+<p>中国的改革开放成功是从海南，深圳等经济特区开始的。设立经济特区，进行政策搞活，最终盘活了整个中国的经济。在大公司进行体制内创新也是一样，要整个公司制度性转变是不可能的，但是我们可以搞“经济特区”制度，对创新团队进行制度性松绑，例如：取消经济特区的上下班打卡考勤制度，实行弹性工作制；给经济特区独立的人事权限，可以自由招聘，自己设定请假调休制度；宽松的财务报销制度；取消严格的绩效考核制度，代替以整个团队的项目目标等等。总之，必须给“经济特区”特殊的政策，彻底的制度松绑，否则就无法培养出来适应创新要求的团队。</p>
+
+<h2>体制外孵化</h2>
+
+<p>很多成功的项目都是体制外孵化的结果，不说上面几个成功案例，我最近看空中网的制作的iOS游戏口袋战争也很成功，其iOS游戏开发部门也不是在北京，而是设在厦门，进行体制外孵化的。只有远离体制，才能获得充分的自由和制度的松绑，才能创造最好的创新环境。特别是作为体制外孵化，团队成员的工作专注度是高度集中的，不会受到各种事务性事情和部门工作协调，以及各种不必要会议的干扰，对产品的专注才有可能成功。</p>
+
+<h2>独立的，更优厚的激励制度</h2>
+
+<p>针对创新团队，不能采用和整个公司一致的奖金激励制度，那只不过是常规性工作达标的奖励。针对创新项目，必须有别于公司整体奖金制度之外的奖励机制，让团队成员感受到更加强烈的动力和追求项目成功的渴望。如果没有独立的奖励制度，和整个公司一视同仁，那么很多人会想，我就算拼了命做出来了成功的创新项目，最终还是和其他部门按部就班循规蹈矩的员工拿一样的奖金，那我凭什么要玩命呢？所以必须把项目的成功和优厚的奖金挂钩起来，和其他部门区别开来，才能激励创新团队员工比一般的员工更加玩命。</p>
+
+<h2>精兵强将，挑选适合创新的人才</h2>
+
+<p>可以这么说，大多数大公司的员工都不是合适做创新项目的人才。创新项目要成功，必须招聘真正适合创新，有创业精神，渴望成功，渴望证明自己的员工，组建这样的团队，才有可能成功。而不是以为简单的砸钱砸人就万事大吉了。</p>
+
+<h2>不遗余力的支持和很高的容忍度，适当的隔离</h2>
+
+<p>创新团队需要不断的试错，需要时间来积累和孵化项目，因此作为老板来说，必须不遗余力的支持创新团队，就像杰克韦尔奇说的那样，极力鼓吹团队，给团队很高的容忍度。除此之外，还需要适当的隔离，就像天使投资人对待投资的团队那样，不能事事干预，给团队充分的自由度。</p>
+ ]]>
+      </description>
+      <pubDate>Mon, 07 May 2012 00:00:00 +0000</pubDate>
+      <link>http://robbinfan.com/blog/24/creative-in-big-company</link>
+      <guid isPermaLink="false">http://robbinfan.com/blog/24/creative-in-big-company</guid>
+    </item>
+    <item>
+      <title>robbin谈管理：坦诚的力量</title>
+      <description>
+        <![CDATA[ <p>作为一个领导，带领一支团队，我觉得最重要的是领导本人必须做到坦诚的态度，只有对团队坦诚，才能和团队之间形成信任，只有和团队形成了信任，才能成为一支默契的团队。因此坦诚的性格是管理者最基本的要求，坦诚的氛围也是对团队最基本的要求。 </p>
+
+<p>杰克韦尔奇说过：什么是信任？当一个领导真诚、坦率、言出必行的时候，信任就出现了，事情就是这么简单。为什么坦诚精神能行得通？很简单，因为坦诚有化繁为简的力量！ </p>
+
+<p>我从艺龙CEO崔广福的微博上也摘录了关于坦诚的观点： </p>
+
+<blockquote>
+<p>我个人完全认同韦尔奇的观点，并一直践行坦诚，朋友们，我可以告诉你坦诚使我的人际关系更简单更高效，使我自己更有效，使企业运转更快更好。 </p>
+
+<p>坦诚很大程度上取决于上级或者周边环境，但是如果你要想自己成就一番事业，你自己要做到卓越，那么你自己必须从开始就坦诚，无论上级或同事是否坦诚。 换言之，越到管理的高层位置，越需要坦诚，但是坦诚却是一个需要长期培养的习惯，不是“呼之即来，挥之即去”的动作。 </p>
+
+<p>一个团队领导如果践行坦诚，那么他的团队就会形成坦诚的风气，即使坦诚在整个公司公司并不盛行。如果一个公司的领导践行坦诚，虽然坦诚是一项艰难而费时的工作，但是坚持下去，那么若干年后，坦诚就会在这个公司蔚然成风。一个公司如果要践行坦诚，在招聘管理人员时必须要考察候选人是否正直坦诚。 </p>
+
+<p>提到鼓舞士气，人们会想起那些慷慨激昂的演说，但这属于临门一脚、亮点式的激励。长期的激励就像生活中的柴米油盐一样平凡，它来自于领导者真诚待人、诚信做事和坦诚沟通，获取下属的信任，你才能真正地长期地激励他们。在艺龙，我们必须提倡并推行坦诚精神，给员工发言权和尊重，鼓励所有的人，尤其是管理人员，直接了当地陈述自己的看法，引起争论和有效地讨论，快速地行动，让所有的人都能贡献他们的聪明才智。我们是个小企业，官僚主义的大企业病，我们得不起。</p>
+</blockquote>
+
+<p>崔广福关于坦诚的观点当中有很多精辟的见解，我发自内心的赞同。坦诚的习惯对于每个管理者都是最基本的要求，只有管理者坦诚，才能获得团队的信任，作秀式的演讲和奖励并不能够真正获得团队的心，还是需要在工作中脚踏实地一点一滴去做好最平凡普通的事情。 </p>
+
+<p>我很重视那些看似很普通的管理工作，例如新员工入职培训，每个月绩效考核、评价和谈话，每周周会，每项工作任务的检查，每个员工请假调休遇到的困难等等。虽然每天处理这些事情我也觉得很烦琐，有时候也会很厌倦，但是可能在管理者只是举手之劳的事情，却会对员工造成长久的困扰。我曾经遇到过员工因为很小的事情长久憋在心里，最后愤而辞职的事情，其实如果当时他把事情告诉我，我一句话就可以解决。只有员工对领导真正信任，才愿意消除戒备心理，开口坦诚心扉，而作为领导如果不能急员工之所急，就很难得到员工的心。 </p>
+
+<p>苹果创始人乔布斯是一个对自己、对别人坦诚的可怕的人，坦诚的残酷，直面事情最真实的一面。这一点从《乔布斯传》最后乔布斯自白可以清晰的看到，只有坦诚才能做出正确的决定，才能避免做错误的事情，才能避免做无用功，而不是明知不行也要去做出对公司不负责任的事情： </p>
+
+<blockquote>
+<p>我不认为我对别人很苛刻，但如果谁把什么事搞砸了，我会当面跟他说。诚实是我的责任。我知道我在说什么，而且事实证明通常我是对的。那是我试图创建的文化。我们相互间诚实到残酷的地步，任何人都可以跟我说，他们认为我就是一堆狗屎，我也可以这样说他们。我们有过一些激烈的争吵，互相吼叫，那可以说是我最美好的一段时光。我在别人面前说“罗恩，那个商店看起来像坨屎”的时候没什么不良感觉。或者我会说“天啊，我们真他妈把这个工艺搞砸了”，就当着负责人的面。这就是我们的规矩：你就得超级诚实。也许有更好的方式，像个绅士俱乐部一样，大家都戴着领带，说着上等人的敬语，满嘴华丽委婉的词汇，但是我对此不太在行，因为我是来自加利福尼亚的中产阶级。 </p>
+
+<p>我有时候对别人很严厉，可能没有必要那么严厉。我还记得里德6岁时，他回到家，而我那天刚解雇了一个人，我当时就在想，一个人要怎样告诉他的家人和幼子他失业了。很不好受。但是必须有人去做这样的事。我认为确保团队的优秀始终是我的责任，如果我不去做这件事，没有人会去做。</p>
+</blockquote>
+
+<p><em>从乔布斯的自己的话当中，我领悟到一个道理：一个公司的企业文化往往是由老板的性格决定的，即老板是什么性格，公司就会形成什么性格，公司的企业文化其实就是老板性格的外在化 。坦诚公平的老板，公司就会形成公开透明的良性的氛围；追求产品细节到极致的老板，公司就会形成精益求精的文化；喜欢耍手腕和拉帮结派的老板，公司就会形成拉帮结派内斗的状况。所以老板自己就必须做到坦诚和透明，老板自己不坦诚，做事情不透明不公开的结果就是公司无法形成良好的氛围，各种八卦和流言就会在员工当中流传，伤害公司的战斗力</em></p>
+
+<h2>总结来说，坦诚对于领导者自身、对团队的好处有：</h2>
+
+<p>1、让你直面自身的缺陷，有针对性的改变自己，解决团队的问题 </p>
+
+<p>其实每个人心里都有自我保护意识，都不愿意太赤裸裸的面对自己的缺点，同样对团队来说也一样，领导者往往不愿意正视团队的问题，不愿意承认自己的问题。但只有自己敞开心扉，放低自己的姿态，残酷的承认自己的问题，承认团队的问题，才有可能谈得上改进。 </p>
+
+<p>2、坦诚才能让问题真正暴露出来，才谈得上去解决它 </p>
+
+<p>我觉得乔布斯那段话是特别好的阐述，必须对自己赤裸裸甚至是粗暴的坦诚，真正让问题真正彻底的暴露出来。而我们可能习惯出现的状况是：尽管存在着尖锐的问题，但是更倾向于回避和怀柔，不鼓励对问题进行最直接的处理，不是直面残酷的现实，当问题最终暴露出来的时候，可能就为时过晚了，或者需要花更大的代价去解决它。 </p>
+
+<p>3、坦诚可以造就一个互相信任的团队氛围 </p>
+
+<p>4、坦诚是创建一个良好的企业文化的必要条件 </p>
+
+<h2>那么为什么做到坦诚往往是困难的呢？</h2>
+
+<p>1、人性当中难以直面自身的弱点，有自我保护心理，不愿意揭露自己的缺陷，心理上习惯性的绕过，难以对自己坦诚和自省。 </p>
+
+<p>必须承认每个人包括我自己都有这种自我保护心理，当面对批评和指责的时候，第一反应就是反驳。所以我们可能更需要时时提醒自己，当面对批评和指责的时候，能不能先冷静下来，仔细听听别人的意见。 </p>
+
+<p>2、对自己的决策往往不愿意承认失败，所以不坦诚，对于领导者来说，承认决策的失败是一件尴尬和损害威信的事情。 </p>
+
+<p>越是有成就的人越难以承认自己的失败，有时候往往为了掩盖自己的失误会做出更多错误的决策。我们需要做的是放下身段，把自己放在一个谦卑的位置上stay foolish，接受自己的错误，接受残酷的现实，接受自己是个loser，这样才有可能纠正错误。 </p>
+
+<p>3、坦诚意味着更多的问题会被暴露出来，这迫使你不得不立刻面对和处理很多你现在暂时并不想面对的问题 </p>
+
+<p>有时候你可能已经意识问题了，但是你害怕所有的问题一下全部被暴露出来，因为这意味着你不得不立刻处理所有的问题，而你现在还没有准备好处理这些麻烦。所以有的时候尽管你意识到并且想处理问题，仍然倾向于掩盖问题，但我个人的经验表明这样做是错误的：只要问题出现了，往往会以最坏的结果爆发出来，任何掩盖或者试图拖延问题的行为最终都会导致更加糟糕的后果，所以我们能做的只有勇敢的捅破脓包，如果有问题，就一次性爆发，一次性处理吧。 </p>
+
+<p>4、对别人坦诚意味着你不得不做出一些让别人感觉不舒服的事情，让别人不喜欢的事情，包括：指出别人存在的问题，解雇表现不好的员工，这些都需要勇气，很多时候这样做还会意味着你自身面临着很大的风险，在中国人与人为善的文化氛围下，做到这一点尤其困难的。 </p>
+
+<h2>作为一个管理者，如何让自己做到坦诚？</h2>
+
+<p>1、身体力行：以身作则，要求自己是一个坦诚的人，要有勇气，直面自己的问题，不害怕向下属暴露自己的缺点，敢于承认自己的问题和决策失误 </p>
+
+<p>2、勇气：对待同事要有勇气，敢于指出他们的问题，对于表现不好的员工要敢于批评和管理，例如为什么不给你加薪，不奖励等等，为什么解雇你。这些谈话和冲突往往让人感到不舒服，我也承认每次解雇员工我都是硬着头皮的，但是你必须有这样的勇气，坦诚不仅仅要对那些表现良好的人，还要对那些表现糟糕的人。如果对自己没有勇气的话，根本做不到坦诚。 </p>
+
+<p>3、公开和透明的做事情方式：做任何事情和决定，让所有人知道为什么你要这么做，理由是什么，堂堂正正，不藏着掖着，很多管理者喜欢秘密的做事情，但这样做会让公司流言四起。没有公开透明的态度，团队根本无法形成良好的氛围。 </p>
+
+<p>4、公正：处事公正，或者尽量要求自己公正。尽管你不可能做到绝对的公正，但是至少应该要求自己尽量公正，同时你应该让所有人知道你的评判标准是什么，这个评判标准是合理的，公开的，在这个标准下做出的决定都是大家心服口服的。这样即使那些认为得不到你公正对待的人，也会明明白白知道他们为什么得不到你的奖励，他们即使离职，也不会对你心怀怨恨。 </p>
+
+<p>坦诚的态度在很多时候会让别人感觉不舒服，其实乔布斯粗暴的坦诚态度也备受争议，但我觉得，如果你是一个结果导向的人，还是应该尽量坚持坦诚的态度，否则最终的结果可能远远偏离你的目标。 </p>
+ ]]>
+      </description>
+      <pubDate>Thu, 19 Apr 2012 00:00:00 +0000</pubDate>
+      <link>http://robbinfan.com/blog/23/honest-strength</link>
+      <guid isPermaLink="false">http://robbinfan.com/blog/23/honest-strength</guid>
+    </item>
+    <item>
+      <title>robbin谈管理：我敬佩的3位CEO管理者</title>
+      <description>
+        <![CDATA[ <h2>我敬佩的第一位CEO管理者是GE前任CEO杰克韦尔奇</h2>
+
+<p>GE在韦尔奇任内20年实现了每年30%的高速增长，市值曾经达到全球第2，是全球最著名的CEO楷模。韦尔奇写的两本书：一本自传，一本Winning我读了很多遍，我觉得最有意思的反差是，尽管韦尔奇整个职业生涯都在GE渡过，出身于GE这样一个庞然大物，但韦尔奇是个非常不循规蹈矩，处处打破常规，雷厉风行的管理者。我从韦尔奇的书中学到了很多宝贵的管理知识，当然韦尔奇早已经成为显学，没必要多费口舌，所以只想提几点自己的感想：</p>
+
+<h3>雷厉风行</h3>
+
+<p>韦尔奇任内做了上千次公司并购和分拆，在韦尔奇自传当中看到很多次大型并购，韦尔奇的整个决策过程，完成谈判并购往往几天到几周时间，真的是令人难以想象的疯狂速度。很多工作往往是一想到就立刻安排人去执行，并且一直盯到底。反观我们自己，无论是工作还是生活，经常拖拖拉拉，很多简单的事情往往都需要很久才能完成，岂不惭愧？</p>
+
+<h3>胆识和勇气</h3>
+
+<p>公司越大越官僚，公司越官僚内部阻力就越大，当阻力大到一定的程度，你在公司内部推动任何进步都会被强大的阻力像润滑油一样消磨掉了。但是韦尔奇对公司的改革相当胆大妄为，任职CEO不到两年，就准备把前任CEO并购过来的犹他国际公司卖掉，并在任职第4年成功卖掉；把GE一百年来赖以起家的电灯泡业务毫不留情的卖掉了；并且推动整个GE帝国一次又一次战略转型。这中间的胆识和勇气真是非凡，看那些并购的描述，韦尔奇就是那个神乎其技的庖丁，游刃有余的肢解一个又一个麻烦。 </p>
+
+<h3>打破常规</h3>
+
+<p>作为一个超级大公司的CEO，韦尔奇基本上处处和循规蹈矩作对，得到了中子弹杰克的绰号，还被评为美国最强硬的老板。韦尔奇自己说过希望GE成为世界上最有竞争力的公司，目标是将小公司所拥有的精神注入到GE这样的大公司去，摆脱传统企业的保守思维，让GE比小公司更有活力，更灵活，这就是为什么韦尔奇打破常规的原因。看看GE这样一个30多万员工的超级大公司尚且能够打破常规，和官僚主义斗争，而我们很多几百上千人的互联网公司都已经沾染了大公司病，是多么大的反差。我看韦尔奇第二本书Winning的时候很惊讶的发现，一个大公司CEO写的书竟然这么适合我这种小型团队管理者阅读，这不正反过来说明韦尔奇的打破常规吗？ </p>
+
+<h2>我敬佩的第二位CEO管理者是苹果的前任CEO乔布斯</h2>
+
+<p>苹果在乔布斯任内也成为市值全球第2(成为市值第1是在乔布斯卸任以后)，当然乔布斯现在比韦尔奇更加成为显学了，更没有必要多费口舌。乔布斯为世人称道的是他的创新能力，而我却觉得乔布斯在管理方面也非常卓越，提几点印象深刻的地方： </p>
+
+<h3>以创业公司的方式运营大公司</h3>
+
+<p>以下是从《乔布斯传》中摘录出来的：</p>
+
+<blockquote>
+<p>乔布斯的管理方式：百杰集思会，Top 100。 <br>
+乔布斯说苹果在整体上不是多个团队的联合体，而是一个单独的团队。乔布斯没有把苹果分割成多个自主的部门，他紧密控制所有部门，并促使他们作为一个团结而灵活的一个整体。全公司只有一条损益底线。蒂姆库克说，我们没有独立财务核算的部门，全公司统一财务核算。 <br>
+苹果一个巨大优势就是各类资源整合，乔布斯希望所有部门并行工作，称之为：深度合作和并行工程。所以，一个产品的开发过程并不是像流水线一样先从工程到设计、再到营销，最后分销，相反，这些部门是同时协作开始工作的。“我们的方针就是开发高度整合的产品，这也意味着我们的生产过程必须是整合和协作完成的”。 <br>
+整个公司都是一流选手，就需要一个协作式的招聘过程，当我们招聘时，即使那个人要去的是营销部门，我也会让他和设计部门以及工程师们聊聊。</p>
+</blockquote>
+
+<p>看了这些你是什么感觉？你觉得这像一个大公司的运营方式，还是像一个小型创业公司的运营方式？ </p>
+
+<p>再说一个《乔布斯传》中的细节，苹果公司讨论iPod模型，菲尔席勒发言：</p>
+
+<blockquote>
+<p>“下面说说我的点子”，他拿来了一堆模型，正面有一个转盘追踪设计，菲尔席勒说：“我一直在想怎么浏览播放列表，你不可能按几百次按钮，如果有个转盘岂不是更好？”...... </p>
+</blockquote>
+
+<p>菲尔席勒不是苹果负责市场营销的SVP吗？ 怎么著名的ClickWheel是他提出来的？他怎么跨界搞工业设计了？我看到这里是非常非常惊讶的！整个公司负责不同职能角色高层群策群力设计一个产品的方式都不可能出现，这种现象往往在早期创业公司，几个创始合伙人窝在一个车库里面鼓捣产品才会出现。 </p>
+
+<p>为什么苹果公司创新能力这么强，突破了超级大公司的物理极限，我想这就是答案：在乔布斯任内，苹果本质上还是一家创业公司。而反观我们，往往几百人的公司已经运营起来像个超级大公司，部门条块分割，利益错综复杂了。 </p>
+
+<h3>决策路径极短</h3>
+
+<p>以下摘录自《乔布斯》传：</p>
+
+<blockquote>
+<p>苹果的决策路径非常短。乔布斯非常注意上下级之间，团队和团队之间的沟通，要求他的指令可以准确无误的在最短时间内，下达到所有相关员工。一位苹果员工回忆：乔布斯提出的公司战略和决策，每个苹果员工都准确的知道。你可以去问苹果的每一个人，他们都非常清楚，尽管他们中大约90%的人可能根本就没有见过乔布斯。</p>
+</blockquote>
+
+<p>你看到了什么？简单说就是：政令畅通，公司使命必达，基层员工对公司使命和价值观理解到位，贯彻充分，执行力强。我们建设团队的最高目标也不过如此了。</p>
+
+<h3>勇于内部相残</h3>
+
+<p>乔布斯的一个商业原则就是：永远不要害怕内部相残。与其被别人取代，不如自己取代自己。例如推出Mac蚕食AppleII和Lisa，推出iPhone蚕食iPod，推出iPad蚕食Mac。吴军在《浪潮之巅》当中指出了诺威格定律，当一个公司在市场上占据超过50%的市场份额就必须寻找新的市场了。我们看到了太多的公司盛极而衰都因为诺威格定律，这里面有微软，摩托罗拉，诺基亚，新加坡创新等等，在自己的主营业务领域形成了垄断，但是阻碍了新领域的开拓，一旦主营业务领域衰落，就不可避免的盛极而衰了。为什么苹果通过iPod占据70%以上的音乐播放器市场以后没有盛极而衰？答案就在这里：要敢于自己杀死自己。IBM的PC没有起来，反而成就了康柏；IBM的DB2没有起来，反而成就了Oracle；柯达被数码相机灭掉，不就是因为没有勇气自己干掉自己吗？ </p>
+
+<p>尽管道理这么简单，但没有几个大公司的CEO敢于这么疯狂，用新技术干掉自己的主营收入之一，只有苹果以创业公司的方式运营，才有可能让公司各个部门像一个团队那样运作，才没有利益分歧，才能形成一致的目标，敢于自己干掉自己。 </p>
+
+<h2>我敬佩的第三位CEO管理者是艺龙的现任CEO崔广福先生</h2>
+
+<p>其实我没见过崔广福，对他所有的了解都来自于他的新浪微博( <a href="http://weibo.com/cuiguangfu">http://weibo.com/cuiguangfu</a> )，以及艺龙COO谢震的评价。2007年崔广福担任了艺龙的CEO，当时的艺龙在机票酒店预定领域早已败给携程，公司持续亏损，就像一艘快沉的船，我当时对艺龙非常不看好，我认为互联网领域是赢家通吃的，艺龙没有任何咸鱼翻身的机会了。现在5年过去了，携程的增长陷入了停滞，股价下跌，而艺龙反而高歌猛进，酒店在线预订领域呈现了极强的竞争实力。 </p>
+
+<p>在IT行业竞争这么激烈而且赢家通吃的市场，一家失败的公司往往就被判死刑了，要东山再起实在凤毛麟角。能扭转乾坤的都堪称大师，就像乔布斯之于苹果，郭士纳之于IBM，马克赫德之于HP。崔广福之于艺龙也做到了这一点。我觉得崔广福有几点也特别优秀：</p>
+
+<h3>极具战略眼光，有胆有识</h3>
+
+<p>携程和艺龙是第一代的中国互联网公司，在第一次互联网泡沫下活下来的主要原因在于审时度势的转变商业模式，不以互联网在线预订为主，而走以线下推广为主，建设庞大的电话呼叫中心。我们都记得早些年携程在各个机场车站发VIP卡的场景吧。然而2007年底艺龙放弃线下推广，专攻在线预订。以下摘自崔广福微博：</p>
+
+<blockquote>
+<p>什么是战略？战略可以用舍得两字表述。有舍才有得，在资源有限的情况下，必须先舍才能后得。啥都舍不得就啥也得不到。战略就是选择性放弃、选择性集中。战略是在被动的、给定环境下的主动选择，即所有战略都是逼出来的。比如艺龙放弃机场/火车站派卡，转战到在线营销，这个就是典型的选择性放弃核选择性集中。虽然当初几乎所有新客户都从派卡中来，放弃这个渠道一定会带来巨大的损失，但是我们还是舍掉啦。由于我们把有限资源集中到我们最希望胜利的战场，即在线预订上，我们今天得到的远比舍掉的多得多。 </p>
+
+<p>如何判断趋势和趋势的转变哪？只需要问两个非常简单的问题：2-5年内，消费者的需求和交易方式会变成什么？我的企业在变化的需求中为消费者创造怎样的价值？当我在2007年问这个问题时，就不难决定艺龙把资源集中到网上预订；当我今天问这个问题时，就不难决定艺龙在一年内停止现金交易的机票预订服务。</p>
+</blockquote>
+
+<p>虽然在移动互联网已经风起云涌的今天，专攻在线预订，重点推手机在线预订现在看起来是很自然的事情了，但是在2007年iPhone刚刚推出的时候，就做出这种战略转型，是需要战略眼光的；放弃线下推广，放弃现金交易，对于一个上市公司的CEO，是需要极大的勇气和胆色的。没有当初的“大舍”，又如何有今天的“大得”呢？看看我们很多公司，战略极其不清晰，这样也要搞，那个也不想放弃，东一榔头西一棒子，有多大的差距？ </p>
+
+<h3>极其自律，把勤奋当成了工作习惯</h3>
+
+<p>我在崔新浪微博上看到，崔在艺龙前几年每天工作12小时，堪称马拉松选手。谢震也告诉过我，崔是一个非常勤奋和自律的人，毅力极强。以下来自谢震在知乎的回答：</p>
+
+<blockquote>
+<p>崔广福担任CEO四年来，每年捐赠自己收入的20%用于CEO奖学金和员工帮困基金；每天都提前一小时上班，和副总裁/总监/经理各个层级直接沟通；亲自面试所有的管理培训生和主管以上级别的提升；每个月都至少抽出两天时间给经理/主管/管理培训生做培训。以人为本是一个老掉牙的口号，要判断一个CEO是否真的以人为本，不能看他的口号喊得有多响，甚至是预算花得有多少（那更多是由公司的财务状况决定的），最关键的是要看他愿意自己花费多少时间在团队成员的招聘、培训、发展上。我认为崔广福在所有的这些方面都做得非常出色。</p>
+</blockquote>
+
+<p>捐献20%的收入奖励员工；每天比员工提前1小时上班；坚持每周和各个层级经理直接沟通；亲自面试所有提升的主管；每两周就要亲自做培训。就这5条哪个不是体力活？长年累月坚持下来，作为一个管理者你能做到几条？ 反正让我每天比员工提前1小时上班，每两周就要做培训我决计做不到。一个上市公司CEO长年累月这么勤奋和自律，我真的非常佩服，如果我们每个团队管理者都能够这么自律，没有可能做不好管理。 </p>
+
+<p>其实除了以上的三位CEO，我敬佩的人还有很多很多，从很多优秀的管理者身上都可以学到很多知识和经验，而且优秀的管理者身上的优点和素质往往也有很多共性的。我也希望自己能够更加努力，向优秀的人靠拢。 </p>
+ ]]>
+      </description>
+      <pubDate>Tue, 17 Apr 2012 00:00:00 +0000</pubDate>
+      <link>http://robbinfan.com/blog/22/my-favorite-ceo</link>
+      <guid isPermaLink="false">http://robbinfan.com/blog/22/my-favorite-ceo</guid>
+    </item>
+    <item>
+      <title>robbin谈管理：改造团队的经验</title>
+      <description>
+        <![CDATA[ <p>一般来说新官上任三把火，新的高管空降之后往往会大肆招人，快速推进改革。但我在入职之前就考虑过这个问题，以为宜缓不宜急，理由如下：</p>
+
+<p>1、做为空降高管，在公司没有任何根基，亦没有做出任何成绩来证明自己，这个时候领导的信任和授权是有限度的。一旦初战不利，领导的信任度被透支，在公司恐怕难有立足之地，更遑论改造团队，发挥自己的才能了。</p>
+
+<p>2、我早年做过很多软件咨询项目，给很多公司讲过敏捷开发、领域模型、面向对象建模和ORM。但我能够得到这些公司的信任，却并非因为讲这些时髦的内容，而是因为擅长解决各类技术上的疑难杂症，可以扮演一个救火队长的角色，对客户公司的问题基本做到手到病除。当一个公司出了大麻烦请你过去的时候，无论未来愿景有多好，其实真正需要你的只有一点，就是让你去灭火的。你不能快速灭火就没有实用价值，无论你社区名望多高都扯淡。</p>
+
+<p>因此刚到的前半年，我相当沉得住气，没有招过一个新员工，而是立足于稳定现有的团队，止住继续下滑的趋势，给团队到处灭火。之所以半年都不招人有3个考虑：</p>
+
+<p>1、不想让现有的团队感觉一朝天子一朝臣，担心自己在公司没有发展前途，成为弃儿，而希望给每个人平等的发展机会。不招新人可以让现有团队心理比较安全，可以安心的好好工作，不至于发生更多的动荡。</p>
+
+<p>2、我认为只有好的制度才能造就好的团队，在没有解决现有团队的痼疾之前招聘新人，不但不会带来新的生产力，反而会造成团队更加混乱，应该先打下一个好的根基，再招人才能事半功倍。</p>
+
+<p>3、对现有团队缺乏深入了解，对公司现有业务了解也不够透彻，也不清楚现有团队真正缺的是什么样的人才，在这种情况下招聘会显得非常盲目，不如对团队有了深入了解之后再有针对性的招人更有的放矢。因此尽管人事部门一再催促，我硬是压着简历不看，拖了好几个月，给当时负责招聘的人事带来了很大的压力。</p>
+
+<p>其实我为自己当时没有一上来就盲目招人而感到庆幸。因为后来我看到过类似的案例，空降的高管在没有对业务深入了解，对团队能力没有深刻认识的情况下就从外面急吼吼招来了新的主管，结果新主管的业务能力和现有团队匹配不上、配合不好，造成了新主管和老团队的尖锐对立，团队搞得一团糟。</p>
+
+<p>解决团队问题首先在于找到问题根本之所在，因此我入职后第一个月就做了一件事情：对团队进行深入的调研。从人事部门调集了每个员工的资料仔细研读；对其他部门高管做访谈，问他们对本部门员工的印象和评价；给部门员工发自己写好的调查问卷，要求每个人认真填写；和每个员工进行面谈，问他们认为公司问题在哪里；写出来我对每个员工的印象和评价。</p>
+
+<p>经过一个月调研，我发现团队混乱根源在于三点：</p>
+
+<p>1、业务配合没有建立合理的工作流程，工作目标既不清晰亦不明确，员工往往无所适从。</p>
+
+<p>2、部门内部管理一塌糊涂，没有清晰明确的管理制度，没有合理的绩效考核，没有赏罚分明的奖惩制度，员工之间没有交流和沟通，积怨很深。</p>
+
+<p>3、跨部门之间的工作配合毫无规范可言，部门之间相互推诿，随便什么业务人员都会随时给研发人员下命令，长此以往，伤害了研发团队的积极性。</p>
+
+<p>简单的说就是：无业务流程，无部门管理，无规范协作。针对这三点我分别采取了相应的措施：</p>
+
+<p>1、针对无业务流程的问题，我设立了产品团队，亲自兼任产品经理把所有产品都抓过来统一管理。无论部门内部还是跨部门产品研发，统一走产品设计流程，制定了规范的产品流程，强调以互联网产品设计驱动整个产品设计，UI，研发和运营流程，将目前公司所有平台级产品开发统统规范起来了。</p>
+
+<p>2、针对无部门管理的问题，进行了部门组织架构调整，减少了部门管理层级，强化了自己对团队的管理权。此外逐步建立和完善部门规范的管理制度，如：使用JIRA进行整个部门的工作任务量化管理；建立定期周会，周报和月报制度；我亲自制定了部门绩效考评内容、评分标准和奖励等级；要求团队间工作配合必须邮件书面确认抄送给我等等。关于部门管理制度的制订，以后准备另外撰文来介绍。</p>
+
+<p>3、针对跨部门无规范协作的问题，反复在部门内部强调一条纪律：跨部门合作必须通过邮件得到两个部门高管确认，口头说的统统无效，拒绝合作；凡未通过我，未得到我邮件批准擅自去做的员工一律严惩。同时亲自接管所有跨部门工作配合，事无巨细都会亲自来做。这半年我很少花时间和自己的团队待在一起，反而花了大量时间和精力用来和其他各个部门的高管沟通和搞好关系。</p>
+
+<p>其中特别想说说这第3点，在我看来如果跨部门协作的问题不解决，即便解决前2个问题也没用。因为产品、研发和运营部门在公司的体系中不是直接创造收入的业务部门，而是承担业务部门的服务者角色。作为一个服务者，往往站在一个被动和弱势的位置上，很容易被业务人员举着收入的大棒指挥你无条件的服从。这样一来，部门内部无论怎样合理的计划都会被外部的力量轻易打破，让员工无所适从。</p>
+
+<p>我之所以亲自接管所有跨部门协作，之所以花那么多时间和其他部门沟通，目的只有一个：充当团队的保护伞，给自己的团队创造一个相对宽松和自由的工作空间，保护团队不被外部的原因伤害到。</p>
+
+<p>当时员工的工作积极性之所以不高，喜欢互相推卸责任，究其原因在于：员工的工作很被动，业务部门人员随便指派任务，随意变更需求，员工无所适从。好不容易按照业务人员的需求做好一个东西以后，业务人员又随意的否定做出来的成果，乱指挥且无计划性，挫伤了我们部门员工的积极性。再者一旦这项工作最终没有取得一个预期的结果，责任又往往被推卸到我们研发人员身上。久而久之，员工就产生了自我保护意识，凡工作尽量往后退，凡责任尽量往别处推，不求有功但求无过。</p>
+
+<p>为打破员工养成的这种自我保护意识，鼓励员工更加积极主动做事情，我能够做的就是把这些责任都扛在自己身上，亲自去协调每项工作，让员工没有后顾之忧，让员工相信我可以搞定他们担心的事情，而一旦工作有成绩，我会在员工月度绩效考评当中体现出来。这也是为什么我花了那么多时间去处理和其他部门协调的原因。</p>
+
+<p>通过半年的努力，渐渐赢得员工对自己的信任，这种信任是替员工解决一个又一个实际工作问题，并且坚持公平公正的给员工的工作成绩考评带来的；团队也开始变得积极主动起来了，我的团队管理制度也基本上定型了，后来只是不断的强化而已。这半年尽管我已经彻底摸清团队，对团队改造已经拿出了有针对性的措施，形成了管理制度，但团队毕竟还在起步阶段，没有什么可以拿得出手的工作业绩，所以当时连公司大老板也觉得我动作太缓慢了，要求我动作快点。</p>
+
+<p>这几年，我根据自己的经验，以及亲眼看过的诸多案例，总结了一个规律：一个新的高管接手团队以后，问题将在半年之后集中爆发出来，而成绩将在一年之后得以体现。</p>
+
+<p>接手一个团队的前半年，往往还处在逐渐消除前任痕迹，打上自己烙印的过程中，在这半年无论高管多能干，业绩也不可能立竿见影。如果这半年能迅速出业绩，往往不是因为你能干，而是因为你的前任给你留下了一个很厚的家底。</p>
+
+<p>真正的挑战来自于半年之后，前任的余热已经全部发挥完了，你的烙印开始打在团队身上，而前任的痕迹还没有消除干净，各种矛盾就会集中爆发出来，这才是真正考验你的时刻。你能不能消化掉这个团队，和这个团队发生美妙的化学反应，全看这半年。</p>
+
+<p>而到一年任期的时候，你合格不合适可以盖棺定论了。要么你已经改造了整个团队，业绩开始快速上升；要么你的团队还是一团遭，业绩没有任何起色。</p>
+
+<p>我前半年以稳为主，并没有遇到什么挑战，业绩也确实乏善可陈，真正的考验都发生在半年以后，而产品改造的成绩差不多都是在一年左右的时间开始井喷的。我也见过这样的案例：高管空降过来的前半年恰逢不错的外部环境，前任留下的家底也不错，业绩开门红，上下皆喜。但是半年过后形势大变，各种矛盾集中爆发，团队动荡，骨干员工纷纷离职，业绩一落千丈。</p>
+
+<p>所以我以为，前半年就出业绩对空降高管来说不是什么好事，这个业绩本来和你无关，但是这么快出业绩非常具有迷惑性，让你以为自己轻松的搞定团队了，却不知下面矛盾重重，暗流汹涌。而且就算你当时能够意识到问题，但由于有良好的业绩，任何人都会犹豫要不要动手调整。而等问题在半年以后集中爆发出来，你再想着手调整团队，已经错过了最佳时机了，就算最终能够解决问题，也需要付出巨大的代价。</p>
+
+<p>刚刚空降到一个新公司的前半年，管理一个团队最重要的事情是： 保持团队的稳定，解决团队的急迫问题，寻找团队的问题根源，有针对性的提出解决方案，这样才能取得团队对你的信任和依赖，你才能接着干下去。如果你和团队之间的信任关系在半年以后还没有建立起来的话，这个时候就是矛盾集中爆发的时刻了。已经找到团队的问题，采取了有针对性的措施，并且取得了团队的信任和支持，这个时候可以开始招聘新员工扩充团队了，现在才开始真正的挑战。</p>
+
+<p>我在入职半年以后开始大批招聘新员工，当时老员工也走了一些，团队只有10名员工，缺岗非常严重，因为刚好赶上招聘季节，所以一下招了10名新员工进来，这个时候我开始犯错误。我以为通过半年的时间对团队的调整已经到位，业务流程也重新规范起来了，管理制度已经明确，团队信任也建立起来了，剩下来的事情应该是很简单的，就是针对缺岗的职位招人填坑就行。但事实是10个新员工入职一个多月以后，竟然有5人离职。。新员工对这个团队竟然如此排斥，显然我太低估了团队改造的难度，后来我反思自己至少犯了三大错误：</p>
+
+<p>一、管理风格不对路。</p>
+
+<p>作为一个管理者，有两类不同的业务管理风格：一类是抓大放小型的，充分放权手下，只关注大的问题，协调团队，自己不会深入业务第一线的细节；另一类是事无巨细型的，非常关注并且能够深入业务第一线的关键性细节，对团队管的非常细。这两类管理风格没有对错之分，究竟哪种方式更适合完全取决于团队的状况。</p>
+
+<p>在我入职的前半年，我的管理风格是抓大放小型的，尽管我亲自接管所有跨部门协作，但是部门内部的业务我管得很少，基本都是放权手下，只抓目标是否达成，不关注执行细节，当时我更关注的是制度的推行和流程的建立，所以我当时工作并不累，也不算忙。这个时候我意识到，尽管制度和流程已经理顺，但是这个团队人员残缺，各个职能团队和岗位都缺人，包括骨干员工在内还没有人真正达到了我对工作上的要求，这个时候抓大放小是不对的。</p>
+
+<p>抓大放小适合于一个成熟的团队，业务流程已经清晰的建立起来了，骨干员工在业务上能够完全领会并且达到你的要求，这个时候你放权可以充分调动团队的自主性和创造性；但是对于一个制度刚刚建立，流程还没有跑顺畅，团队残缺，骨干员工业务能力不及格的团队，抓大放小是错误的。你必须事无巨细，从第一线的业务细节抓起，手把手的带员工，教会他们怎么正确的做事情，怎样达到你的要求，手把手的培养业务骨干，搭建团队核心架构。</p>
+
+<p>如果你做不到这一点，那么你永远也无法成功改造一个团队，如果你自己不深入业务第一线，你根本就无法发现最核心的问题是什么，最有效的解决办法是什么，你根本无法触及核心问题，何谈有效解决问题呢？这个时候还搞抓大放小根本就是隔靴搔痒。我这些年看过了太多的案例，管理层自己从不真正深入业务，也缺乏对业务的深刻理解，总是寄希望于招人来解决问题，结果换了一茬又一茬人，问题永远解决不了，而且从来不深刻反思自己是否亲自尝试解决业务问题。总之，作为管理层，如果自己没有深入一线去发现问题，自己动手去解决问题的决心和勇气的话，那这个团队什么指望都没有。</p>
+
+<p>因此我开始有意识的改变自己的管理风格，当时采取的一系列措施有：</p>
+
+<p>1、我本来有自己独立的办公隔间，不和员工在一起办公。这个时候我搬到员工工位坐，这段时间主抓哪个团队的工作，就搬到那个团队中间的位置坐，随时随地和员工沟通，检查员工工作，及时解决团队出现的问题，并且这样做也可以身体力行的教会员工怎样正确的做事情，怎样达到我要求的工作标准，怎样成为一个优秀的员工，怎样避免犯不应该出现的错误。</p>
+
+<p>2、主动给自己设立3个月的冻结期，杜绝一切外事活动，专心致志在公司蹲点练好部门的内功。</p>
+
+<p>3、深入业务第一线，狠抓细节。如对研发团队我会做详细的code review，亲自带领研发团队做技术交流和分享，参与技术讨论亲手定架构方案；对产品团队我会仔细检查每个产品原型设计；对运营团队我会亲自撰写社区公告文案。每周和各个团队Leader详细检查工作内容，事无巨细。</p>
+
+<p>这段时期其实是我工作最累的时候，团队方方面面统统抓统统管，有段时间因为精神过于紧张，以致于晚上睡觉的时候还觉得自己心脏砰砰砰的跳，但是效果非常明显，通过一年的时间彻底打造了一支执行力非常强，非常团结而且有默契的团队，可以说整个团队的工作方式和思维方式都深深打上了我的风格烙印。我个人认为，凡是希望彻底的改造一支团队，重建团队的文化，作为团队的领导人，必须经历这样一段亲力亲为事无巨细的过程。乔布斯在1997年重返苹果公司担任iCEO以后，也有相当长一段时间亲力亲为事无巨细，《乔布斯传》中详细描写了这一段经历。</p>
+
+<p>二、忽视了团队文化的冲击。</p>
+
+<p>关于公司文化氛围的重要性我现在觉得怎样强调都不过分，我准备以后另外写文章谈文化问题。但在当时我完全没有这方面经验。当出现严重的新入职员工离职潮以后，我找了一些在职和离职的新员工私下的调查和谈话，渐渐发现了问题的严重性。当时部门都是工作多年的老人，老的风气和习惯已经形成了很顽固的不良文化，新人很难适应这种不良的文化和环境，同时又被个别老员工灌输了太多公司多年前沉芝麻烂谷子的负面八卦，工作情绪受到很大的影响。老的不良的文化包括：做事情没有积极性；永远不承认自己的错误，永远找借口推卸责任，永远都是别人的问题；不求有功但求无过；责任心差，对待工作自我要求低；对工作安排喜欢讨价还价；碰到困难就退缩；喜欢嚼八卦和流言。</p>
+
+<p>在一个不好的文化氛围下，优秀的员工会被排挤，团队没有向心力，也很难留住好的人才，员工流失率会非常高。我认为衡量一个团队文化氛围是否有吸引力，有一个很重要的指标，新员工的流失率：如果一个团队氛围非常好，新员工入职以后往往能够快速融入进来，流失率很低；如果团队氛围差，新员工入职以后比较茫然难以融入，往往会很快离职，流失率非常高。我见过不少团队有一个现象：新招聘的员工总是留不住，招一个人走一个人，几年过去了，团队里面还是那些老面孔，貌似团队稳定性高，但实际上这样的团队是文化氛围非常糟糕的，留不住新员工远远比留不住老员工可怕。</p>
+
+<p>我希望给团队树立的文化是：</p>
+
+<ul>
+<li>坦诚，公开，透明</li>
+<li>平等相处，消除等级感</li>
+<li>工作气氛轻松，团队关系和谐</li>
+<li>主动承担工作，积极配合同事</li>
+<li>责任心强，执行力高</li>
+</ul>
+
+<p>具体采取的措施包括：</p>
+
+<ul>
+<li>加强部门内部的沟通和交流，打造一个交流氛围浓厚，成员关系很融洽的部门。鼓励员工工作时间经常热烈讨论和交流，甚至说说笑笑，无拘无束；</li>
+<li>重视团队内部的分享，团队间轮流进行内部培训，将自己最近钻研的工作和技术心得向大家分享；</li>
+<li>在部门内部加强团队管理，树立赏罚分明，及时落实的威信，发现问题迅速解决避免拖延；</li>
+<li>抓重点团队主次分明，在团队建设积极向上的交流氛围，推动整个部门风气的转变；</li>
+<li>坐在员工旁边，及时和员工交流，杜绝各种杂事，拿出时间多和员工交流； </li>
+</ul>
+
+<p>实践证明，只要团队领导身体力行的亲自抓团队，改造团队的文化氛围就不是一件困难的事情。我花了3个月的时间就扭转了部门文化氛围，6个月以后团队已经能够达到我树立的标准了，之后只是反复不断的强化而已。当整个部门建设了良好的文化氛围以后，很多事情都会变得非常简单：新员工和老员工开始融合成为了一个集体，团队的执行力得到了巨大的改变，过去我下达的一个命令，要我自己一个环节一个环节盯下去才能完成，这个时候下达一个命令，整个团队就会动起来自己按部就班的执行下去，并且这种风气反过来开始影响老员工积极转变，形成了美好的化学反应。</p>
+
+<p>三、对新员工入职的适应期缺乏经验。</p>
+
+<p>新员工入职的第一个月对他具有决定性的意义，对新员工的第一个月必须非常重视，安排专人做导师。我当时对于新人入职也没有太多经验，忽视了这一点，结果一个多月10名新员工密集入职，我没有专门制订新人入职以后的培训和工作安排，当时我又有一个多星期不在公司，新人入职以后非常茫然。</p>
+
+<p>后来我总结了新人入职的很多经验，采取了不少措施：</p>
+
+<ul>
+<li>我将带新人列入各个团队经理的绩效考核项目之内，加强对团队经理带新人方面的考评；</li>
+<li>每周和各团队经理沟通新人入职后的表现状况，入职前两周几乎天天询问团队经理，对新人出现的各种状况立刻采取应对措施；</li>
+<li>我定期对入职新人进行本部门的新人培训，帮助新人迅速了解部门状况；</li>
+<li>对团队经理们进行管理培训，教会他们如何带好新人； </li>
+</ul>
+
+<p>之后新人入职以后的融入情况就变得越来越好，2011年全年新入职员工几乎占整个团队3/4，但是团队消化新员工的状况非常良好。并且随着新鲜血液的不断加入，很多新人工作的冲劲和心气对部门文化氛围不但没有冲淡，反而对部门文化进行了很大的加强，而这种更加活跃，更加积极主动承担责任做事情的态度反过来又不断激励了部门老人改变自己的作风，以更加积极的态度工作，新人和老人之间的互相促进起了美妙的化学反应。</p>
+
+<p>从我招聘新人面临严峻的挑战开始，大约用了9个月左右的时间完成了整个部门团队的建设和文化的重建，之后就再也没有碰到过太大的困难，基本上是越来越顺利了。我感觉搭建和培养一个团队，有点像NBA的球队总经理经营一支NBA球队一样，你必须时时刻刻仔细呵护好这支团队，放入合适的人组成拼图，让团队形成化学反应，然后不断的优化和提升这只团队的战斗力。而且经营团队也是逆水行舟的过程，如果你什么时候放松了要求，团队就会慢慢变质，所以你必须时时刻刻去强调文化价值观，优化团队结构，激励团队士气，这是一个有点累但是很有成就感的工作，特别是当你看到一支团队从死气沉沉的状态在你的手里天翻地覆的变化，团队和你之间形成了坦诚和信任的关系，在工作上建立了默契以后，你会感觉自己和这只团队已经血脉相连。</p>
+
+<p>在这个阶段，优化团队结构往往是领导需要面临的最大挑战。领导需要根据团队的文化价值观和业务能力的考核，淘汰那些曾经作出过贡献，但是现在不符合团队价值观，对团队实际有负面影响的员工；或者虽然个人性格很好但是业务能力差的员工。</p>
+
+<p>有很多领导抱有妇人之仁，喜欢在团队里面留着这些不合适的员工，不愿意淘汰这些掉队的员工。但我认为这种做法是大错特错了。中国有句成语叫做“大仁不仁”，意思是说真正的大仁大义是不滥施仁义。滥施仁义就会赏罚不分，令那些真正做出卓越贡献的人受到伤害。杰克韦尔奇也一再强调对待员工要区别对待，优秀的员工重赏，糟糕的员工不能一念之仁，不处理糟糕的行为，不处罚糟糕的员工，结果就会伤害整个团队的积极性，进而影响整个团队的稳定性。 </p>
+
+<p>在我看来，管理者应该为整个团队负责任，对于那些已经不符合团队要求或者业务能力差的员工，如果领导一昧包容，实际上就是在伤害那些表现优秀和符合团队价值观的员工，长此以往就是一个典型的逆向淘汰，优秀的员工会逐渐离开，留下来的都是不合格的员工。因此对待那些不愿意融入团队，不求进步的员工绝对不能手软，必须严格要求，如果实在无法改造，必须请他走人。</p>
+
+<p>在我的团队里，有很多人随着整个团队的进步也在飞速的进步，表现越来越好；但是也有一些老员工总是原地踏步，在整个团队发生天翻地覆变化的同时，慢慢变成了整个团队进步的阻碍。这个时候作为领导就必须敲打员工，赶着他进步，如果他还是改变不了自己，必须果断换血。事实上通过过去两年的实践，几乎每一个这样的员工离职，都会推动整个团队向前走一大步，这也坚定了我的管理理念：*大仁不仁，赏罚分明。*</p>
+
+<p>在2012年春节过后，我进行了第二次组织架构调整。在两年前我刚来公司的时候，我进行了第一次组织架构调整，针对当时的部门协作差的问题合并了两个我管理的部门；而两年后则是将部门一分为三，分设三个部门经理，进行了放权。我来公司两年的时间，管理风格主动做了两次调整：</p>
+
+<ul>
+<li>最开始前半年是抓大放小，不管业务细节，只抓部门制度建设，流程管理，以及跨部门协作；</li>
+<li>从2010年10月底开始，因为面临了严峻的挑战，开始转变为事无巨细，深入业务第一线的管理方式；</li>
+<li>到2012年春节后，我感觉整个团队已经非常成熟，团队氛围和业务能力都令我比较满意了，这个时候通过部门分拆，授权各个部门经理去管理各自的团队，我把自己的管理方式再次调整为抓大放小型的管理风格，甚至开始有意识的将跨部门的协作全部下放到各个部门经理去处理，给他们充分的权限和自由度，这两个月实际执行下来的效果非常好。当然对于有些我关注的重要的业务，我还是会自己亲自深入业务第一线亲自抓。</li>
+</ul>
+
+<p>从我自己的管理实践来说，*我对团队管理的理解就是创造一个环境，激励员工们充分发挥才能和创造力，提升员工的价值，领导的角色就是小心的呵护好团队，充当好团队的保护伞。领导和团队之间最需要建立的是坦诚和信任，产生化学反应的标志是形成默契*</p>
+
+<p>总结我改造团队的经验如下：</p>
+
+<p>1、刚接手一个有问题的团队，不着急上来烧三把火，要先对整个团队做深入的调研，搞清楚整个团队的核心问题在哪里，团队的组成架构和运作方式，团队每个成员的特点和能力，他们之间的关系，要彻底的摸清楚这个团队过去成功的地方和失败的地方，具有的优点和存在的问题。即首先做充分的调研工作，调研工作可以从公司上至CEO，下至每个员工方面进行一对一的谈话。</p>
+
+<p>2、找到核心问题以后，针对核心问题进行团队微调和解决问题，但不能做大的手术，以安抚现有的员工，调动员工积极性为主，帮助他们解决实际问题，树立他们对我的信任和依赖。这个阶段基本上在到处灭火，解决团队各种问题，目的在于取得员工的信赖，树立团队威信。</p>
+
+<p>3、对团队完全掌控了之后，开始大规模招聘符合价值观的新员工，这个阶段是最痛苦的阶段。新员工的价值观和老员工价值观进行了激烈的冲突，这个时候必须手把手带员工，在团队当中树立新的公司文化风气。</p>
+
+<p>4、等员工逐渐适应公司并且形成了新的团队风气以后，开始回过头加强对老员工的要求，用新员工的工作面貌来影响和改变老员工，促使他们也发生转变，适应新的团队风气。</p>
+
+<p>5、团队优化阶段，强调团队价值观，对于不符合价值观的员工面临两个选择：改变自己接受新的团队风气，融入新的团队；或者走人。这个阶段对待不能融入团队，不求进步的员工不能手软，必须严格要求。</p>
+
+<p>6、不断吸引符合价值观的新人充实团队，彻底完成了团队的重建工作。</p>
+
+<p>在整个过程当中，应该记住以下几点：</p>
+
+<p>1、大仁不仁，赏罚分明。</p>
+
+<p>2、对团队的价值观灌输，从一开始就要不停的讲，反复的讲。必须让整个团队清晰的明白：什么是正确的做事情方式，什么是错误的做事情方式，什么是被鼓励的，什么是被批评的，团队的文化是什么样的，明确反对的行为是什么样的。</p>
+
+<p>3、所有员工和团队，从一开始都是手把手的带，在带团队的工作过程中，从最小的细节入手，带出来符合自己工作方式和风格的员工和团队，而一旦打上了自己烙印的员工和团队，就可以松口气放权了。</p>
+
+<p>4、管理团队首要在于搭建合理的团队组织架构，明确每个人的责权利，建立透明的团队合作以及沟通制度。在良好的组织架构和良性制度驱动下，再招聘和培养合适的人才，团队就会变得越来越好。光顾着招人和激励人，但组织架构不合理制度有问题，则是缘木求鱼，永远是救火队长永远解决不完的问题。</p>
+
+<p>5、老员工身上是一定有问题的。因为在一个有问题的团队里面，有抱负的员工一定会跳槽，剩下来的员工要么是混日子的，要么就是观望形势寻找机会随时走的。老员工想离职，绝不挽留。</p>
+ ]]>
+      </description>
+      <pubDate>Wed, 04 Apr 2012 00:00:00 +0000</pubDate>
+      <link>http://robbinfan.com/blog/21/build-team-experience</link>
+      <guid isPermaLink="false">http://robbinfan.com/blog/21/build-team-experience</guid>
+    </item>
+    <item>
+      <title>robbin的自白：You&#x27;ve got to find what you love</title>
+      <description>
+        <![CDATA[ <p>《You&#39;ve got to find what you love》是乔布斯2005年在斯坦福大学毕业典礼上的演讲，当我第一次看到这个演讲视频的时候，被彻底震住了。回顾自己跌跌撞撞的人生道路，就是一个不断寻找然后坚持自己钟爱事业的过程。我今年36岁了，龙年是我的本命年，作为一个白羊座属龙的人，天生性格就是积极进取，具有开拓精神，但我经常遗憾自己从来没能取得自己希望的成就，曾经在人生的道路上迷失和浪费了太多年。 </p>
+
+<p>去年底我和一个高中同学网上闲聊，他推荐我看一部电影《那些年我们一起追的女孩》，说找回了高中时代的感觉。我们就读的学校是东风汽车公司第一中学，高中三年在我们很多同学心里都有无可替代的位置。因为我们都是来自于一个大型国有企业的子弟，有相同的成长背景，都是第一次离开父母到学校住宿，在一起学习和生活了三年，过着简单而纯粹的日子，为一个特殊的目标奋斗，培养出了特殊的感情。 </p>
+
+<p>于是我怀着好奇心看了这部电影，很感动。我高中时代延续到大学的初恋，剧情之狗血比九把刀有过之而无不及，但是这部电影更多是唤起了我对那个尘封已久的时代的美好记忆：同学之间单纯而隽永的友谊，对权威的蔑视和嘲弄，对未来人生道路的憧憬和渴望。可能对很多人来说，由于面临高考的压力，高中生活并不是那么愉快，但对我来说，高中时代是人生最开心的一段经历：和一群相同背景的朋友过着无忧无虑的集体生活；有清晰而明确的人生奋斗目标高考；虽然有学习压力，但只要通过自己的努力就会取得好成绩；未来充满无限的可能性。我那个时候就是这么没心没肺的过着简单而充实的每一天；和同学们一起偷偷鄙视老师的权威；而一到寒暑假，同学们就像蝗虫一样去扫荡每个人家里的冰箱。 </p>
+
+<p>我的高中时代并非以喜剧收场。高二下学期我曾经考到年级第5名的成绩，于是雄心勃勃想考清华。但高三上学期因为校运会体力透支，发了一场突如其来的高烧，身体就垮了，直到高考前夕才逐渐恢复过来，学习成绩就下滑到第10名左右，难以前进一步。在湖北省这样的排名不太可能考清华，所以最后报考了父母的母校天津大学。 </p>
+
+<p>从1994年上大学，一直到2006年自己创业之前，我陷入了长达12年的迷茫期。 </p>
+
+<p>在大学时代我非常迷茫。我当时总带着点优越感，觉得自己志存高远，不大瞧得起身边的同学，尤其是那些貌似不务正业的同学，从来没想过要融入同学当中，但是又不知道自己的志向是什么，也不清楚自己究竟喜欢干什么，适合干什么，完全没有方向感。我后来特别羡慕嫉妒恨的一类人是五分钟的郜韶飞，恺英网络的王悦。他们从大学时代就已经非常清楚自己今后该干什么，目标异常清晰，方向感超强，一毕业就开始了自己的事业。我常常叹息自己浪费了太多青春，年龄都活到狗身上去了。 </p>
+
+<p>到大学毕业前我仍然不知道自己将来究竟想干什么，看到别人都想留学考托福GRE，于是也跟着彻夜排队报考托福GRE；听人说搞金融有前途总行研究生院牛逼，也狠狠啃过许多西方经济学教材；看同学报考北大光华也跟着考了一次。但每件事情都没有坚持下来，要么主动放弃，要么彻底失败。我准备考研的时候也曾非常投入的备考，但有一天突然就失去了考研的兴趣。总之，在面临择业和未来发展道路的问题上，一贯有点自命不凡的我遇到了前所未有的尴尬和挫折。 </p>
+
+<p>一天我无意中看到一篇关于网景公司的报道，介绍了网景的发家史：SGI创始人之一吉姆克拉克看到了Mosaic浏览器的潜力，于是找到编写Mosaic的主要作者伊利诺伊大学的研究生马克安德森，两人创办了网景，开发了第一代流行的商用浏览器软件Navigator。公司成立16个月后成功上市，市值达到了30亿美元，24岁的马克安德森成了亿万富翁，并且亲手开启了伟大的互联网时代。 </p>
+
+<p>这个传奇般的故事彻底唬住了我当时幼稚的心，再梦幻的人生也不过如此了：年纪轻轻成了亿万富翁，改变了整个世界。当时正是第一次互联网泡沫时期，传奇的故事每天都在上演，我不由得神往这个充满奇迹的行业。我明白进入IT行业要从程序员开始做起，尽管我不是计算机专业毕业，大学时候的主要时间还放在啃经济学教材上，但仍然凭着一点点计算机基础和自学精神开始了程序员生涯。 </p>
+
+<p>那几年可能是我平生最刻苦但也乐在其中的阶段：曾经连续两三周在公司地板打地铺过夜；曾经大年三十晚上还在钻研技术；曾经很穷但是嚷着砸锅卖血也要装宽带上网。因为公司小，样样都得自己来，我身兼了前端PHP，后端Java，Oracle DBA和Linux系统运维全部技术工种，水平进步很快。我很庆幸自己误打误撞选择了互联网行业做技术，因为我发现自己发自内心深处的喜爱技术和互联网，喜爱充满了挑战的工作，喜爱在没有太多人为约束的情况下尽情的挖掘自身的潜力和创造力，更喜爱在高手如云的互联网行业激发自己的好胜心。 </p>
+
+<p>这个故事最后并不是喜剧收场。因为互联网泡沫破灭，公司经营每况愈下，投资方渐渐接管公司，各种龌龊事情横生，普通员工的很多利益没有保障，我最终身心俱疲的选择了离开。那个时候我怀着对互联网公司的失望，一门心思投奔了外企，并且拿到了非常满意的待遇，但这却是我职业生涯的噩梦。 </p>
+
+<p>我是国有大型企业的职工子弟出身，从小耳濡目染了官僚主义的各种龌龊，在那个环境下厂长随便一句话可以决定一个职工的一生。所以我从来都对国有企业深恶痛绝，极其反感官僚主义，厌恶和鄙视拉帮结派，投机钻营和溜须拍马的人，向往氛围自由和能够尽情发挥个人才能的工作环境。 </p>
+
+<p>但是当我到外企后发现这个环境并不适合我：就像小说《杜拉拉升职记》一样的公司氛围，每个人如同螺丝钉一般精确的完成自己的工作，不能越雷池一步；私底下团队之间暗自较劲打小报告，台面上彼此亲密无间；公司等级制度森严，总监清一色外籍人士。我不喜欢这种刻意营造出来的有点虚伪的企业文化；不喜欢每天没干出点什么成绩，却邮件来邮件去互相吹嘘得天花乱坠；更不喜欢这种严丝合缝，完全被桎梏起来工作方式，感觉自己有力无处使，完全被废掉了；职业天花板是清晰可见的，我直接汇报的老板已经是总监级的香港人了。 </p>
+
+<p>我仿佛一下看到了自己今后几十年以至退休的样子，这种混吃等死的感觉太可怕了。我希望未来有无限的憧憬和可能性，充满不确定性的未来才是我最希望追求的生活方式，才有可能通过自己的努力去改变未来，创造自己的人生。我开始明白自己想过什么样的人生了，那就是不断开拓进取，永远挑战自己，无拘无束充满自由的创造未来。 </p>
+
+<p>我离开外企以后恰逢SARS爆发，休息了比较长的时间，期间做了几个项目，边做项目边总结个人的经验，开始混技术社区，为了宣传开源创办了JavaEye论坛。虽然我已经明白了自己真正的梦想是互联网创业，梦寐以求的是像马克安德森那样创业上市改变世界，但很清楚自己几斤几两，也很清楚靠JavaEye这个论坛创业想象空间太小，所以我给自己的定位是“抱大腿创业”，寻找有背景有实力的创业团队加盟，成为参与创业者。在随后的两年多时间里，我仍然在互联网公司工作，但已经心向创业，而且在2005年注册了自己的公司。 </p>
+
+<p>但遗憾的是我从来没有抱上过够粗的大腿，2003年底和2006年初我短暂的参与了两次失败的创业，在2006年第二次参与创业失败以后处境变得非常尴尬，站在了人生的十字路口上：我已经30岁买房结婚还房贷了，到了必须向社会现实、向一个普通的人生妥协的时候了， 最理智的选择就是去一家大型互联网公司做一个资深的架构师拿高薪养老，更何况零起步的草根创业对已经30岁的我来说显得风险太高，创业成本太大。 </p>
+
+<p>我当时心里非常纠结，退一步凭借自己的技术能力和社区声望谋求在大型互联网公司做一个资深架构师易如反掌，但我不甘心这辈子只能这样渡过，不甘心放弃自己心中的理想，也非常明白自己并不适合在大公司里面做循规蹈矩的事情，所以这个看似不错的选择对我来说从来都不是一个特别值得考虑的退路。最后我决定无论如何都要自己创业一次，否则只怕自己会终生遗憾。 </p>
+
+<p>在2006年正式创业的时候，我总结了自己12年的迷茫期，认为自己磕磕绊绊这么多年在于在性格上存在三大缺陷：一、优柔寡断，我很早就看好互联网创业，却犹犹豫豫很多年，没有坚决果断的抛掉一切去创业；二、缺乏坚持，摇摆不定，我虽然一心想创业却在不同的职业发展道路上来回摇摆，没能坚持一件事情做到底；三、不够勤奋，我从小成绩优秀，学习从不费力，缺乏需要非常勤奋投入才能做成事情的锻炼，没有养成勤奋的习惯，到了社会上才发现要取得成功无不需要加倍的努力才行。简单的说，就是我欠缺的是：勤奋、果断和坚持。 </p>
+
+<p>从2006年8月开始创业到2010年5月正式完成被并购，在将近4年的草根创业过程中我吃了无数的苦，承受了无数的压力，遭遇了无数的挫折和打击，经历了无数的喜剧和悲剧，但是我这次没有想过自己创业会失败，而是坚信自己能够成功。因为我明白自己之所以迷茫很多年，之所以达不到自己心目中成功的标准，就在于没有坚持做好一件事情，如果放弃创业，就等于放弃人生，终将一事无成，我必须证明自己是一个可以把事情做成的人；更何况创业虽然艰苦，但这是自己真心喜欢过的生活，我非常享受不断挑战自己，面临并且克服一个又一个困难的过程。 </p>
+
+<p>将近四年的创业经历带给我最大的收获不是物质财富，而是彻底改造了自己的性格，让自己脱胎换骨。创业是长期在极限状态下坚持工作，性格的缺陷会被无限的放大，极小的失误都可能导致创业失败。这迫使你必须用冷酷的态度来深刻解剖自己，认识自己的优势和缺陷是什么，有针对性的改变自己。这是一个痛苦的过程，但是你不这样做就被判了死刑，为了公司的生存和给自己和员工发工资，必须强迫自己改变。 </p>
+
+<p>我渐渐发现，年龄越大，自我修炼越重要。乔布斯也说过：“在人生的头30年里，你养成习惯；30岁后，习惯塑造你”。30岁之前不容易看出来性格缺陷带来的问题，但是到30岁以后，凡不能成事的人，我稍有接触，都可以从其性格找到明显的原因。所以深刻的认识自己的缺点，持之以恒的改正和提高自己，人生的路才能越走越宽。我创业这几年，有针对性的改变了自己性格上的三大缺陷：做事不再优柔寡断，而是雷厉风行；不再摇摆不定，而是一旦选定方向就能够坚持到底，绝不动摇绝不妥协；学会了胸怀理想，但是脚踏实地，当年曾经一起创业的伙伴对我的评价也是绝对的敬业和勤奋。 </p>
+
+<p>最后我想以偶像乔布斯在《You&#39;ve got to find what you love》演讲中的结语来勉励自己： Stay Hungry. Stay Foolish. </p>
+ ]]>
+      </description>
+      <pubDate>Mon, 26 Mar 2012 00:00:00 +0000</pubDate>
+      <link>http://robbinfan.com/blog/20/my-life</link>
+      <guid isPermaLink="false">http://robbinfan.com/blog/20/my-life</guid>
+    </item>
+  </channel>
+</rss>
