@@ -144,8 +144,8 @@ if __name__ == '__main__':
         'http://feed.feedsky.com/aqee-net',
         'http://feed.feedsky.com/programmer',
         'http://cnpolitics.org/feed/'
-        'test/robin',
-        'test/feedsky'
+        '../test/robin',
+        '../test/feedsky'
     ]
     for url in test_urls:
         try:
