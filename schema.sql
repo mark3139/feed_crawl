@@ -1,11 +1,12 @@
 charset utf8;
+drop table if exists feeds;
 create table feeds(
 	id int auto_increment,
 	title varchar(64) not null,
 	link varchar(256) not null,
 	user_link varchar(256) not null,
-	subtitle varchar(128) not null,
-	image varchar(256) not null,
+	subtitle varchar(128) not null default '',
+	image varchar(256) not null default '',
 	des varchar(512) not null default '将要添加...',
 	updated timestamp not null default current_timestamp,
 	`type` enum('rss', 'atom') not null,
@@ -17,14 +18,15 @@ create table feeds(
 	unique key (hash)
 ) engine=myisam default charset=utf8;
 
+drop table if exists items;
 create table items(
 	id int auto_increment,
 	fid int not null,
 	title varchar(64) not null,
 	link varchar(256) not null,
 	des varchar(512) not null,
-	category varchar(128) not null,
-	author varchar(64) not null,
+	category varchar(128) not null default '',
+	author varchar(64) not null default '',
 	pubdate timestamp not null,
 	hash char(32) not null,
 	primary key(id),
