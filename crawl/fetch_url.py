@@ -3,13 +3,11 @@
 import re
 import urllib2
 import logging
-from datetime import datetime
 
 import memcache
 
 from lib.feed import parse_rss, parse_atom
-from lib.misc import str_md5
-from model.feed import Feeds, Items, DB, FeedsModel, ItemsModel
+from model.feed import Feeds, Items, DB
 
 
 class MC():
@@ -55,12 +53,12 @@ class Fetch():
         except KeyError, e:
             logging.exception(e)
             return 0
-        lastid = self.feeds.add(feed, self.url)
+        lastid = self.feeds.add(feed, self.url, type)
 
         #self.mc.set(self.url, row.lastrowid)
 
         for item in feed.get_items():
-            self.add(lastid, item)
+            self.items.add(lastid, item)
         return lastid
 
     def fetch_url(self):

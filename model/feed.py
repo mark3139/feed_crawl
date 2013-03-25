@@ -1,6 +1,6 @@
 #/usr/bin python
 #-*-coding: utf8-*-
-import datetime
+from datetime import datetime
 
 from sqlalchemy import Table
 from sqlalchemy.orm import mapper
@@ -55,7 +55,7 @@ class Feeds(ModelBase):
         rhash = self.session.query(FeedsModel.hash).filter(FeedsModel.id == id).one()[0]
         return True if hash == rhash else False
 
-    def add(self, id, feed, u_url):
+    def add(self, feed, u_url, type='rss'):
         finfo = FeedsModel()
         finfo.title = feed.title
         finfo.link = feed.link
