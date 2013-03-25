@@ -10,6 +10,29 @@
 	margin: 0;
 }
 
+.inline li p {
+	font-size: 18px;
+}
+
+.inline li .btn-group {
+	margin-top: 0;
+}
+
 .hero-unit {
-	background-image: url(../img/book1.jpg)
+	background-image: url(../img/book1.jpg);
+}
+
+table tr td.author {
+	color: #ff0000;
+	text-align: right;
+}
+
+table tr td.date {
+	color: #00ff00;
+	text-align: right;
+}
+
+table tr td.title div {
+	overflow: hidden;
+	height: 20px;
 }
