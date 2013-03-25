@@ -55,49 +55,12 @@ class Fetch():
         except KeyError, e:
             logging.exception(e)
             return 0
-        finfo = FeedsModel()
-        finfo.title = feed.title
-        finfo.link = feed.link
-        finfo.updated = getattr(feed, 'updated', None)
-        finfo.type = type
-        finfo.user_link = self.url
-        im = getattr(feed, 'image', '')
-        st = getattr(feed, 'subtitle', '')
-        if im:
-            finfo.image = im
-        if st:
-            finfo.subtitle = st
-        if feed.des:
-            finfo.des = feed.des
-        if not finfo.des:
-            feed.des = ''
-        finfo.hash = str_md5((feed.title + feed.des).encode('utf8'))
-        lastid = self.feeds.add(finfo)
+        lastid = self.feeds.add(feed, self.url)
 
         #self.mc.set(self.url, row.lastrowid)
 
         for item in feed.get_items():
-            item_info = ItemsModel()
-            item_info.title = item.title
-            item_info.link = item.link
-            item_info.des = item.des
-            item_info.pubdate = item.pubdate
-            item_info.fid = lastid
-            if item.author:
-                item_info.author = item.author
-            if item.category:
-                item_info.category = item.category
-            if not item.des:
-                item_info.hash = str_md5((item_info.title).encode('utf8'))
-            else:
-                item_info.hash = str_md5((item_info.title + item_info.des).encode('utf8'))
-            try:
-                dt = datetime.strptime(item_info.pubdate[0: -6], "%a, %d %b %Y %H:%M:%S")
-                item_info.pubdate = dt.strftime("%Y-%m-%d %H:%M:%S")
-            except ValueError:
-                pass
-
-            self.items.add(item_info)
+            self.add(lastid, item)
         return lastid
 
     def fetch_url(self):
@@ -105,7 +68,7 @@ class Fetch():
         return id if id else self.feed_info()
 
 if __name__ == '__main__':
-    logging.basicConfig(filename='err.log', level=logging.DEBUG)
+    logging.basicConfig(filename='log/fetch.log', level=logging.DEBUG)
     #f = Fetch('http://robbinfan.com/rss/')
     DB()
     test_urls = [
