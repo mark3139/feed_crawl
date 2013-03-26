@@ -1,9 +1,8 @@
 #/usr/bin python
 #-*-coding: utf8-*-
-import logging
-
 from model.feed import Feeds, DB, Items
 from lib.feed import parse_rss, parse_atom
+from lib.misc import setlog
 
 
 def update():
@@ -20,7 +19,6 @@ def update():
 
 
 if __name__ == '__main__':
-    logfile = 'log/update.log'
-    logging.basicConfig(filename=None, level=logging.DEBUG)
+    log = setlog(filename='log/update.log')
     DB()
     update()

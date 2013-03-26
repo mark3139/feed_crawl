@@ -2,11 +2,11 @@
 #-*-coding: utf8-*-
 import re
 import urllib2
-import logging
 
 import memcache
 
 from lib.feed import parse_rss, parse_atom
+from lib.misc import setlog
 from model.feed import Feeds, Items, DB
 
 
@@ -34,7 +34,7 @@ class Fetch():
         atom = r'<feed xmlns="http://www.w3.org/2005/Atom">'
         head = open(self.url).read(1000)
         #head = urllib2.urlopen(self.url, timeout=10).read(200)
-        logging.info("URL:%s, HEAD:%s", self.url, head)
+        log.debug("URL:%s, HEAD:%s", self.url, head)
         if re.search(rss, head):
             return 'rss'
         elif re.search(atom, head):
@@ -51,7 +51,7 @@ class Fetch():
         try:
             feed = pm[type](self.url)
         except KeyError, e:
-            logging.exception(e)
+            log.exception(e)
             return 0
         lastid = self.feeds.add(feed, self.url, type)
 
@@ -66,7 +66,8 @@ class Fetch():
         return id if id else self.feed_info()
 
 if __name__ == '__main__':
-    logging.basicConfig(filename='log/fetch.log', level=logging.DEBUG)
+    log = setlog(filename='log/fetch.log')
+    log.info('start')
     #f = Fetch('http://robbinfan.com/rss/')
     DB()
     test_urls = [
@@ -84,7 +85,7 @@ if __name__ == '__main__':
     ]
     for url in test_urls:
         try:
+            log.info('URL:%s', url)
             f = Fetch(url)
-            print f.fetch_url()
         except Exception, e:
-            logging.exception(e)
+            log.exception(e)
